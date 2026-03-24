@@ -39,7 +39,7 @@
 \maketitle
 
 \begin{abstract}
-Large language models (LLMs) are widely known to struggle with self-correction, yet the root cause remains debated. We hypothesize that self-correction failures stem not from inherent reasoning limitations but from \emph{identity bias} and \emph{context anchoring} during critique. To test this, we introduce the \textbf{Identity Swap Critique} framework, in which the same solution is presented to a critic model under different authorship labels (self, other model, anonymous, human) while the content remains identical. We conduct experiments across three reasoning benchmarks (MATH, GPQA, BigBench Hard) and four LLM families (Qwen3, GPT-o3, Gemini 2.5 Flash, Claude Sonnet), measuring detection accuracy, correction success rate, and harmful correction rate under each condition. We further construct a solver--critic matrix revealing systematic cross-model critique advantages, and conduct session ablations to decompose the relative contributions of identity bias and context anchoring. Our results show that [TODO: key finding]. These findings reframe self-correction as a protocol design problem rather than a fundamental reasoning limitation.
+Large language models (LLMs) are widely known to struggle with self-correction, yet the root cause remains debated. We hypothesize that self-correction failures stem not from inherent reasoning limitations but from \emph{identity bias} and \emph{context anchoring} during critique. To test this, we introduce the \textbf{Identity Swap Critique} framework, in which the same solution is presented to a critic model under different authorship labels (self, other model, anonymous, human) while the content remains identical. We conduct experiments across three reasoning benchmarks (MATH, GPQA, BigBench Hard) and four LLM families (Qwen3, GPT-5 Mini, Gemini 2.5 Flash, Claude Sonnet), measuring detection accuracy, correction success rate, and harmful correction rate under each condition. We further construct a solver--critic matrix revealing systematic cross-model critique advantages, and conduct session ablations to decompose the relative contributions of identity bias and context anchoring. Our results show that [TODO: key finding]. These findings reframe self-correction as a protocol design problem rather than a fundamental reasoning limitation.
 \end{abstract}
 
 %% ============================================================
@@ -119,7 +119,7 @@ We use four model families as both solvers and critics, representing diverse arc
 
 \begin{itemize}
     \item \textbf{Qwen3} (Alibaba): An open-source model served via vLLM.
-    \item \textbf{GPT-o3} (OpenAI): A state-of-the-art proprietary reasoning model.
+    \item \textbf{GPT-5 Mini} (OpenAI): A cost-efficient proprietary model.
     \item \textbf{Gemini 2.5 Flash} (Google): A fast proprietary model optimized for efficiency.
     \item \textbf{Claude Sonnet} (Anthropic): A competitive proprietary model.
 \end{itemize}
