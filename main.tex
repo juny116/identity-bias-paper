@@ -39,7 +39,7 @@
 \maketitle
 
 \begin{abstract}
-Large language models (LLMs) are widely known to struggle with self-correction, yet the root cause remains debated. We hypothesize that self-correction failures stem not from inherent reasoning limitations but from \emph{identity bias} and \emph{context anchoring} during critique. To test this, we introduce the \textbf{Identity Swap Critique} framework, in which the same solution is presented to a critic model under different authorship labels (self, other model, weak model, anonymous, human) while the content remains identical. We conduct experiments across multiple reasoning benchmarks and LLM families, measuring error detection accuracy, correction quality, and confidence calibration under each condition. Our results show that [TODO: key finding]. We further decompose the sources of bias through context separation experiments and demonstrate that simple protocol-level mitigations---such as anonymization and session separation---significantly improve critique quality. These findings reframe self-correction as a protocol design problem rather than a fundamental reasoning limitation.
+Large language models (LLMs) are widely known to struggle with self-correction, yet the root cause remains debated. We hypothesize that self-correction failures stem not from inherent reasoning limitations but from \emph{identity bias} and \emph{context anchoring} during critique. To test this, we introduce the \textbf{Identity Swap Critique} framework, in which the same solution is presented to a critic model under different authorship labels (self, other model, anonymous, human) while the content remains identical. We conduct experiments across three reasoning benchmarks (MATH, GPQA, BigBench Hard) and four LLM families (Qwen3, GPT-o3, Gemini 2.5 Flash, Claude Sonnet), measuring detection accuracy, correction success rate, and harmful correction rate under each condition. We further construct a solver--critic matrix revealing systematic cross-model critique advantages, and conduct session ablations to decompose the relative contributions of identity bias and context anchoring. Our results show that [TODO: key finding]. These findings reframe self-correction as a protocol design problem rather than a fundamental reasoning limitation.
 \end{abstract}
 
 %% ============================================================
@@ -58,9 +58,9 @@ These findings collectively suggest that LLM self-correction failure is not prim
 In this paper, we introduce the \textbf{Identity Swap Critique} framework to directly measure how authorship framing affects critique quality. Our contributions are:
 
 \begin{itemize}
-    \item We design a controlled experiment where the \emph{same solution} is presented to a critic under five identity conditions (\textsc{Self}, \textsc{Other Model}, \textsc{Weak Model}, \textsc{Anonymous}, \textsc{Human}), isolating the effect of attribution on error detection, correction, and confidence calibration.
-    \item We decompose the sources of self-correction failure through \emph{context separation experiments} that disentangle identity bias from context anchoring effects.
-    \item We demonstrate that simple, cost-free protocol-level mitigations---anonymization and session separation---substantially improve critique quality, establishing self-correction as a \emph{protocol design} problem rather than a fundamental reasoning limitation.
+    \item We design a controlled experiment where the \emph{same solution} is presented to a critic under four identity conditions (\textsc{Self}, \textsc{Other Model}, \textsc{Anonymous}, \textsc{Human}), isolating the effect of attribution on error detection, correction success, and harmful correction rates.
+    \item We construct a \emph{solver--critic matrix} across four model families, revealing systematic self vs.\ cross critique gaps and cross-model critique asymmetries.
+    \item We conduct \emph{session and anchoring ablations} that disentangle identity bias from context anchoring effects, establishing self-correction failure as a \emph{protocol design} problem rather than a fundamental reasoning limitation.
 \end{itemize}
 
 %% ============================================================
@@ -104,70 +104,54 @@ Recent benchmarking efforts have begun to systematically evaluate the critique a
 \subsection{Datasets}
 \label{sec:datasets}
 
-We evaluate on three reasoning benchmarks that require non-trivial chain-of-thought solutions:
+We evaluate across three reasoning domains to ensure generality of findings:
 
-\paragraph{GSM8K} \citep{cobbe2021gsm8k} contains grade-school math word problems requiring multi-step arithmetic reasoning. We use the test split and sample 500 problems.
+\paragraph{MATH} \citep{hendrycks2021math} contains competition-level mathematics problems spanning algebra, geometry, number theory, and other domains with varying difficulty levels. We sample 100 problems.
 
-\paragraph{MATH} \citep{hendrycks2021math} contains competition-level mathematics problems across algebra, geometry, number theory, and other domains with varying difficulty levels. We sample 300 problems.
+\paragraph{GPQA} \citep{rein2023gpqa} is a graduate-level scientific reasoning benchmark designed to be ``Google-proof,'' with multiple-choice questions requiring expert-level knowledge. We use the diamond subset (80 problems).
 
-\paragraph{GPQA} \citep{rein2023gpqa} is a graduate-level question-answering benchmark designed to be ``Google-proof.'' We use the diamond subset for its highest quality annotations.
-
-% TODO: Finalize sample sizes and splits after pilot experiments.
+\paragraph{BigBench Hard (BBH)} is a curated subset of challenging BigBench tasks that require multi-step reasoning. We use five tasks: logical deduction, tracking shuffled objects, multistep arithmetic, date understanding, and navigate, sampling 120 problems total.
 
 \subsection{Models}
 \label{sec:models}
 
-We use three model families to ensure generality of findings:
+We use four model families as both solvers and critics, representing diverse architectures and training approaches:
 
 \begin{itemize}
-    \item \textbf{GPT-4o} (OpenAI): A state-of-the-art proprietary model.
-    \item \textbf{Claude Sonnet} (Anthropic): A competitive proprietary model from a different developer.
-    \item \textbf{Llama-3.1-70B-Instruct} (Meta): An open-source model served via vLLM.
+    \item \textbf{Qwen3} (Alibaba): An open-source model served via vLLM.
+    \item \textbf{GPT-o3} (OpenAI): A state-of-the-art proprietary reasoning model.
+    \item \textbf{Gemini 2.5 Flash} (Google): A fast proprietary model optimized for efficiency.
+    \item \textbf{Claude Sonnet} (Anthropic): A competitive proprietary model.
 \end{itemize}
 
-Each model serves as both solver (generating chain-of-thought solutions) and critic (evaluating solutions under different identity conditions). This design allows us to measure self-critique bias within each model family.
+Each model serves as both solver (generating chain-of-thought solutions) and critic (evaluating solutions under different identity conditions). For evaluation of corrected answers, we use \textbf{GPT-5.4} as an independent judge model.
 
 \subsection{Identity Swap Critique Framework}
 \label{sec:identity-swap}
 
-The core experimental design presents the \emph{same solution} to the critic model under five authorship labels, varying only the identity preamble:
+The core experimental design presents the \emph{same solution} to the critic model under four authorship labels, varying only the identity preamble while keeping all other prompt components identical:
 
 \begin{enumerate}
     \item \textbf{\textsc{Self}}: ``This is your previous solution. Please review your own work.''
-    \item \textbf{\textsc{Other Model}}: ``This solution was generated by [Model X]. Please review it.''
-    \item \textbf{\textsc{Weak Model}}: ``This solution was generated by a small, less capable model. Please review it.''
+    \item \textbf{\textsc{Other Model}}: ``This solution was generated by another AI model. Please review it.''
     \item \textbf{\textsc{Anonymous}}: ``Here is a solution. Please review it.''
-    \item \textbf{\textsc{Human}}: ``A student wrote this solution. Please review it.''
+    \item \textbf{\textsc{Human}}: ``This solution was written by a human student. Please review it.''
 \end{enumerate}
 
-The solution text, problem statement, and all other prompt components remain identical across conditions. Solutions are generated once per (model, dataset) pair and reused across all identity conditions to ensure a controlled comparison.
-
-\subsection{Context Separation Conditions}
-\label{sec:context-separation}
-
-To disentangle identity bias from context anchoring, we conduct a second experiment with five context conditions:
-
-\begin{enumerate}
-    \item \textbf{Same Session}: The solution appears as the model's own prior assistant turn in the conversation, and the model is asked to review it within the same session.
-    \item \textbf{New Session}: The solution is presented in a fresh session with the \textsc{Self} label.
-    \item \textbf{New Session + Anonymous}: Fresh session with no authorship information.
-    \item \textbf{New Session + Paraphrased}: Fresh session with the solution paraphrased to reduce surface-pattern recognition.
-    \item \textbf{Cross-Model}: A different model performs the review.
-\end{enumerate}
-
-Comparing these conditions allows us to decompose how much of the self-correction gap is attributable to identity framing versus context anchoring.
+Solutions are generated once per (model, dataset) pair and reused across all identity conditions. We sample balanced sets of correct and incorrect solutions to enable meaningful computation of both detection and correction metrics.
 
 \subsection{Evaluation Metrics}
 \label{sec:metrics}
 
-For each critique, the model provides a structured JSON response indicating (1) whether the solution contains an error, (2) the error location, (3) a corrected answer, and (4) a confidence score. We compute:
+For each critique, the model provides a structured JSON response indicating (1) whether the solution is correct, (2) an error description if applicable, (3) a corrected answer, and (4) a confidence score. We compute the following metrics:
 
 \begin{itemize}
-    \item \textbf{Error Detection Accuracy}: Whether the critic correctly identifies the presence or absence of errors.
-    \item \textbf{True Positive Rate (TPR)}: Fraction of actually incorrect solutions flagged as erroneous.
-    \item \textbf{False Positive Rate (FPR)}: Fraction of correct solutions incorrectly flagged.
-    \item \textbf{Correction Accuracy}: Whether the critic's corrected answer matches the ground truth.
-    \item \textbf{Confidence Calibration}: Expected Calibration Error (ECE) between stated confidence and actual accuracy.
+    \item \textbf{Detection Accuracy}: Whether the critic correctly identifies the solution as correct or incorrect.
+    \item \textbf{Correction Success Rate}: Among incorrect solutions detected by the critic, the fraction where the corrected answer matches the ground truth (wrong $\rightarrow$ correct).
+    \item \textbf{Harmful Correction Rate}: Among correct solutions flagged as incorrect by the critic, the fraction where the ``corrected'' answer is actually wrong (correct $\rightarrow$ wrong).
+    \item \textbf{False Error Rate}: Fraction of correct solutions incorrectly labeled as containing errors.
+    \item \textbf{Self vs Cross Gap}: The difference in performance between self-critique and cross-critique conditions, which serves as our primary measure of identity bias.
+    \item \textbf{Confidence Calibration}: Expected Calibration Error (ECE) between stated confidence and actual detection accuracy.
 \end{itemize}
 
 %% ============================================================
@@ -177,33 +161,35 @@ For each critique, the model provides a structured JSON response indicating (1) 
 
 % TODO: Results showing critique varies by authorship label
 % Expected structure:
-% - Main results table: Detection accuracy, TPR, FPR, correction accuracy per condition per model
-% - Key finding: Self condition shows lower TPR / higher FPR than Anonymous/Other
+% - Main results table: Detection accuracy, Correction success, Harmful correction per condition per model
+% - Key finding: Self condition shows lower detection / higher harmful correction than Anonymous/Other
+% - Self vs Cross Gap analysis
 % - Statistical significance tests (McNemar's test for paired comparisons)
-% - Figure: Bar chart of detection accuracy across 5 conditions
+% - Figure: Bar chart of detection accuracy across 4 conditions, grouped by model
 
 %% ============================================================
-\section{Experiment 2: Context Separation}
+\section{Experiment 2: Solver--Critic Matrix}
 \label{sec:exp2}
 %% ============================================================
 
-% TODO: Results decomposing attribution bias vs. context anchoring
+% TODO: Cross-model critique matrix results
 % Expected structure:
-% - Comparison table: Same session vs. New session vs. New session + anonymous
-% - Quantify: How much of the gap is context anchoring vs. identity bias
-% - Figure: Decomposition showing relative contribution of each factor
+% - 4x4 matrix table: rows = solver, columns = critic, cells = detection accuracy
+% - Diagonal = self-critique, off-diagonal = cross-critique
+% - Key finding: Off-diagonal (cross-critique) consistently outperforms diagonal (self-critique)
+% - Per-model Self vs Cross gap analysis
+% - Asymmetries: Do some models benefit more from external critique?
 
 %% ============================================================
-\section{Experiment 3: Mitigation Strategies}
+\section{Experiment 3: Session and Anchoring Ablation}
 \label{sec:exp3}
 %% ============================================================
 
-% TODO: Results showing simple protocol changes improve correction
+% TODO: Context separation results (optional experiment)
 % Expected structure:
-% - Baseline (Self) vs. each mitigation
-% - Show improvement in detection accuracy and correction accuracy
-% - Cost analysis: mitigations are free (no additional API calls for anonymization)
-% - Compare with more expensive alternatives (multi-agent, cross-model)
+% - Same session vs. New session vs. Paraphrased
+% - Decompose: how much of the self-critique gap is context anchoring vs. identity bias
+% - Same session should show strongest anchoring effect
 
 %% ============================================================
 \section{Analysis}
@@ -211,11 +197,11 @@ For each critique, the model provides a structured JSON response indicating (1) 
 %% ============================================================
 
 % TODO: Additional analyses
-% - Task difficulty vs. bias magnitude: Is identity bias stronger for harder problems?
-% - Model size effects: Do larger models show more or less identity bias?
+% - Per-dataset breakdown: Is identity bias stronger for math vs. logical reasoning vs. scientific?
+% - Difficulty analysis: Is bias stronger for harder problems?
 % - Confidence calibration across conditions: Are models better calibrated when anonymous?
-% - False correction rates: Do models more often flip correct→incorrect under Self?
-% - Context length effects: Does bias increase with longer solutions?
+% - Harmful correction analysis: Do models more often flip correct→incorrect under Self?
+% - Model family comparison: Which families show the largest Self vs Cross gap?
 
 %% ============================================================
 \section{Discussion}
@@ -225,10 +211,11 @@ For each critique, the model provides a structured JSON response indicating (1) 
 % TODO: Discuss implications
 % Key points:
 % - Self-correction is not a reasoning limitation but a protocol design problem
+% - The solver-critic matrix reveals systematic cross-model advantages
 % - Simple mitigations (anonymization, session separation) are effective and free
 % - Implications for LLM evaluation pipelines and deployment
 % - Connection to human cognitive biases (confirmation bias, anchoring)
-% - When to use cross-model review vs. anonymized self-review
+% - Practical recommendations: when to use cross-model review vs. anonymized self-review
 
 \section*{Limitations}
 
