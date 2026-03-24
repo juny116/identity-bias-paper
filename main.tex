@@ -1,0 +1,154 @@
+\documentclass[11pt]{article}
+
+% Change "review" to "final" to generate the final (sometimes called camera-ready) version.
+% Change to "preprint" to generate a non-anonymous version with page numbers.
+\usepackage[review]{acl}
+
+% Standard package includes
+\usepackage{times}
+\usepackage{latexsym}
+
+% For proper rendering and hyphenation of words containing Latin characters (including in bib files)
+\usepackage[T1]{fontenc}
+
+% This assumes your files are encoded as UTF8
+\usepackage[utf8]{inputenc}
+
+% This is not strictly necessary, and may be commented out,
+% but it will improve the layout of the manuscript,
+% and will typically save some space.
+\usepackage{microtype}
+\usepackage{inconsolata}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{multirow}
+\usepackage{subcaption}
+
+\title{Who Wrote This? Identity Bias in LLM Self-Critique}
+
+\author{First Author \\
+  Affiliation \\
+  \texttt{email@domain} \\\And
+  Second Author \\
+  Affiliation \\
+  \texttt{email@domain} \\}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Large language models (LLMs) are widely known to struggle with self-correction, yet the root cause remains debated. We hypothesize that self-correction failures stem not from inherent reasoning limitations but from \emph{identity bias} and \emph{context anchoring} during critique. To test this, we introduce the \textbf{Identity Swap Critique} framework, in which the same solution is presented to a critic model under different authorship labels (self, other model, weak model, anonymous, human) while the content remains identical. We conduct experiments across multiple reasoning benchmarks and LLM families, measuring error detection accuracy, correction quality, and confidence calibration under each condition. Our results show that [TODO: key finding]. We further decompose the sources of bias through context separation experiments and demonstrate that simple protocol-level mitigations—such as anonymization and session separation—significantly improve critique quality. These findings reframe self-correction as a protocol design problem rather than a fundamental reasoning limitation.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+% TODO: Write introduction
+% Key points:
+% 1. LLM self-correction is widely considered weak
+% 2. Existing work treats this as a reasoning limitation
+% 3. We hypothesize the failure arises from perspective and attribution bias
+% 4. Our contributions: identity swap framework, bias decomposition, mitigation protocols
+
+\section{Related Work}
+\label{sec:related}
+
+% TODO: Write related work
+% Key areas:
+% - Self-correction in LLMs
+% - Self-preference and self-attribution bias
+% - Multi-agent debate and cross-model review
+% - Source framing effects on evaluation
+
+\section{Experimental Setup}
+\label{sec:setup}
+
+\subsection{Datasets}
+\label{sec:datasets}
+
+% TODO: Describe datasets
+% GSM8K, MATH, GPQA, etc.
+
+\subsection{Models}
+\label{sec:models}
+
+% TODO: Describe models used as solvers and critics
+% GPT-4o, Claude Sonnet, Llama-3.1-70B
+
+\subsection{Identity Swap Critique Framework}
+\label{sec:identity-swap}
+
+% TODO: Describe the 5 identity conditions
+% Self, Other model, Weak model, Anonymous, Human
+
+\subsection{Context Separation Conditions}
+\label{sec:context-separation}
+
+% TODO: Describe the 5 context conditions
+% Same session, New session, New session + anonymous, New session + paraphrased, Cross-model
+
+\subsection{Evaluation Metrics}
+\label{sec:metrics}
+
+% TODO: Describe metrics
+% Error detection accuracy, localization accuracy, correction accuracy, FPR, confidence calibration
+
+\section{Experiment 1: Identity Swap Critique}
+\label{sec:exp1}
+
+% TODO: Results showing critique varies by authorship label
+
+\section{Experiment 2: Context Separation}
+\label{sec:exp2}
+
+% TODO: Results decomposing attribution bias vs. context anchoring
+
+\section{Experiment 3: Mitigation Strategies}
+\label{sec:exp3}
+
+% TODO: Results showing simple protocol changes improve correction
+% Anonymization, paraphrasing, new session review, multi-agent critique
+
+\section{Analysis}
+\label{sec:analysis}
+
+% TODO: Additional analyses
+% - Task difficulty vs. bias magnitude
+% - Model size effects
+% - Confidence calibration across conditions
+% - False correction rates
+% - Context length effects
+
+\section{Discussion}
+\label{sec:discussion}
+
+% TODO: Discuss implications
+% - Self-correction failures as protocol design problems
+% - Practical guidelines for LLM evaluation
+% - Limitations of current approach
+
+\section*{Limitations}
+
+% TODO: Discuss limitations
+
+\section*{Acknowledgments}
+
+% TODO: Acknowledgments
+
+\bibliography{refs}
+
+\appendix
+
+\section{Prompt Templates}
+\label{sec:prompts}
+
+% TODO: Include full prompt templates for each condition
+
+\section{Additional Results}
+\label{sec:additional-results}
+
+% TODO: Additional tables and figures
+
+\end{document}
