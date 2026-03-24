@@ -39,99 +39,201 @@
 \maketitle
 
 \begin{abstract}
-Large language models (LLMs) are widely known to struggle with self-correction, yet the root cause remains debated. We hypothesize that self-correction failures stem not from inherent reasoning limitations but from \emph{identity bias} and \emph{context anchoring} during critique. To test this, we introduce the \textbf{Identity Swap Critique} framework, in which the same solution is presented to a critic model under different authorship labels (self, other model, weak model, anonymous, human) while the content remains identical. We conduct experiments across multiple reasoning benchmarks and LLM families, measuring error detection accuracy, correction quality, and confidence calibration under each condition. Our results show that [TODO: key finding]. We further decompose the sources of bias through context separation experiments and demonstrate that simple protocol-level mitigations—such as anonymization and session separation—significantly improve critique quality. These findings reframe self-correction as a protocol design problem rather than a fundamental reasoning limitation.
+Large language models (LLMs) are widely known to struggle with self-correction, yet the root cause remains debated. We hypothesize that self-correction failures stem not from inherent reasoning limitations but from \emph{identity bias} and \emph{context anchoring} during critique. To test this, we introduce the \textbf{Identity Swap Critique} framework, in which the same solution is presented to a critic model under different authorship labels (self, other model, weak model, anonymous, human) while the content remains identical. We conduct experiments across multiple reasoning benchmarks and LLM families, measuring error detection accuracy, correction quality, and confidence calibration under each condition. Our results show that [TODO: key finding]. We further decompose the sources of bias through context separation experiments and demonstrate that simple protocol-level mitigations---such as anonymization and session separation---significantly improve critique quality. These findings reframe self-correction as a protocol design problem rather than a fundamental reasoning limitation.
 \end{abstract}
 
+%% ============================================================
 \section{Introduction}
 \label{sec:intro}
+%% ============================================================
 
-% TODO: Write introduction
-% Key points:
-% 1. LLM self-correction is widely considered weak
-% 2. Existing work treats this as a reasoning limitation
-% 3. We hypothesize the failure arises from perspective and attribution bias
-% 4. Our contributions: identity swap framework, bias decomposition, mitigation protocols
+Large language models are known to struggle with correcting their own mistakes. Prior work has shown that models often fail to revise incorrect reasoning when reviewing their own outputs, yet can successfully identify and correct the same errors when the solutions are presented as external outputs rather than their own---a phenomenon termed the \emph{self-correction blind spot} \citep{tsui2025blindspot, huang2024selfcorrection}. Comprehensive surveys confirm that intrinsic self-correction, without external feedback or tool use, is unreliable and can even be harmful, sometimes flipping correct answers to incorrect ones \citep{kamoi2024selfcorrection}. Even iterative self-refinement approaches, while promising on surface-level text quality, show limited gains on reasoning tasks where errors are more subtle \citep{madaan2023selfrefine}.
 
+A parallel line of research reveals a pervasive \emph{self-preference bias}: when LLMs are used as evaluators, they systematically rate their own outputs more favorably than equivalent outputs attributed to other models \citep{panickssery2024selfpreference, wataoka2024selfpreference}. This bias persists across tasks and model families, and recent work demonstrates that it follows \emph{assigned} identity rather than true origin---models favor whichever identity they are told is ``theirs'' \citep{lehr2025extremeselfpreference}. Furthermore, \citet{xu2024pride} show that self-bias is amplified during self-refinement, where models preferentially preserve their own formulations even when alternatives are superior.
+
+Beyond self-preference, \emph{source framing} effects further complicate evaluation. \citet{germani2025sourceframing} demonstrate that attributing identical text to different sources (e.g., human authors of different nationalities, or other LLMs) systematically shifts evaluation scores across multiple state-of-the-art models. Similarly, \citet{song2026crosscontext} show that reviewing within the same conversation context leads to anchoring and rationalization, and that simply separating production and review into distinct sessions improves error detection.
+
+These findings collectively suggest that LLM self-correction failure is not primarily a \emph{reasoning} problem but a \emph{perspective and attribution} problem. The model's judgment changes based on \emph{who it believes wrote the solution}, not on the solution's content. Yet no prior work has systematically controlled for authorship attribution across multiple identity conditions within a unified experimental framework, nor has the relative contribution of identity bias versus context anchoring been formally decomposed.
+
+In this paper, we introduce the \textbf{Identity Swap Critique} framework to directly measure how authorship framing affects critique quality. Our contributions are:
+
+\begin{itemize}
+    \item We design a controlled experiment where the \emph{same solution} is presented to a critic under five identity conditions (\textsc{Self}, \textsc{Other Model}, \textsc{Weak Model}, \textsc{Anonymous}, \textsc{Human}), isolating the effect of attribution on error detection, correction, and confidence calibration.
+    \item We decompose the sources of self-correction failure through \emph{context separation experiments} that disentangle identity bias from context anchoring effects.
+    \item We demonstrate that simple, cost-free protocol-level mitigations---anonymization and session separation---substantially improve critique quality, establishing self-correction as a \emph{protocol design} problem rather than a fundamental reasoning limitation.
+\end{itemize}
+
+%% ============================================================
 \section{Related Work}
 \label{sec:related}
+%% ============================================================
 
-% TODO: Write related work
-% Key areas:
-% - Self-correction in LLMs
-% - Self-preference and self-attribution bias
-% - Multi-agent debate and cross-model review
-% - Source framing effects on evaluation
+\subsection{Self-Correction in LLMs}
 
+Self-correction---the ability of a model to identify and fix errors in its own outputs---has received considerable attention. \citet{huang2024selfcorrection} provide a landmark study showing that LLMs cannot self-correct reasoning without external feedback, and that adding a self-correction step often \emph{degrades} performance. \citet{kamoi2024selfcorrection} survey the growing literature and identify conditions under which self-correction succeeds (with tool feedback, oracle signals) versus fails (intrinsic self-correction). \citet{tsui2025blindspot} introduce Self-Correction Bench and quantify the \emph{blind spot}: across 14 open-source models, 64.5\% of errors that models detect in external outputs go undetected when attributed to themselves. \citet{madaan2023selfrefine} propose Self-Refine, an iterative approach where the model generates, critiques, and refines its own output, showing improvements on generation tasks but with more limited gains on reasoning.
+
+\subsection{Self-Preference and Self-Attribution Bias}
+
+A related body of work examines evaluation bias. \citet{panickssery2024selfpreference} demonstrate that LLM evaluators can recognize and preferentially score their own generations. \citet{wataoka2024selfpreference} introduce a quantitative metric for self-preference bias in LLM-as-a-Judge settings, finding significant bias in GPT-4 linked to familiarity (lower perplexity). \citet{lehr2025extremeselfpreference} push further, showing that self-preference follows \emph{assigned} rather than true identity: when an LLM is told it is a different model, its preferences shift accordingly, suggesting the bias is driven by identity framing rather than genuine self-recognition. \citet{xu2024pride} analyze how self-bias is amplified during iterative refinement, with models preferentially retaining their own formulations. \citet{zheng2024judging} develop MT-Bench and Chatbot Arena for systematic LLM evaluation, revealing positional and verbosity biases alongside self-preference effects.
+
+\subsection{Source Framing and Attribution Effects}
+
+\citet{germani2025sourceframing} conduct a large-scale study (192,000 assessments) showing that attributing identical statements to different sources---particularly to individuals of specific nationalities---systematically shifts LLM evaluation scores. This demonstrates that framing effects extend beyond self/other distinctions to encompass broader identity and attribution biases. Their finding that inter-model agreement breaks down specifically when source framing is introduced highlights the fragility of LLM evaluation under attribution manipulation.
+
+\subsection{Context Anchoring and Cross-Context Review}
+
+\citet{song2026crosscontext} identify context anchoring as a distinct source of self-correction failure: when a model reviews its output within the same conversation, the production history anchors its judgment, leading to rationalization rather than scrutiny. Their Cross-Context Review method---simply reviewing in a fresh session---improves error detection, suggesting that context separation is a complementary mitigation to identity anonymization.
+
+\subsection{Multi-Agent Debate and Cross-Model Review}
+
+An alternative approach to improving critique quality is to use multiple models. \citet{du2023debate} show that multi-agent debate among LLMs improves factuality and reasoning. \citet{liang2023encouraging} demonstrate that structured disagreement among agents leads to better outcomes. While effective, these approaches increase cost and complexity; our work investigates whether simpler, single-model protocol changes can achieve comparable improvements.
+
+\subsection{Critique Benchmarks}
+
+\citet{lin2024criticbench} introduce CriticBench, a benchmark for critique-correct reasoning across mathematical, commonsense, symbolic, coding, and algorithmic domains. They find a linear relationship between generation and critique capabilities and show that stronger models critique weaker ones more effectively---a finding directly relevant to our identity swap conditions.
+
+%% ============================================================
 \section{Experimental Setup}
 \label{sec:setup}
+%% ============================================================
 
 \subsection{Datasets}
 \label{sec:datasets}
 
-% TODO: Describe datasets
-% GSM8K, MATH, GPQA, etc.
+We evaluate on three reasoning benchmarks that require non-trivial chain-of-thought solutions:
+
+\paragraph{GSM8K} \citep{cobbe2021gsm8k} contains grade-school math word problems requiring multi-step arithmetic reasoning. We use the test split and sample 500 problems.
+
+\paragraph{MATH} \citep{hendrycks2021math} contains competition-level mathematics problems across algebra, geometry, number theory, and other domains with varying difficulty levels. We sample 300 problems.
+
+\paragraph{GPQA} \citep{rein2023gpqa} is a graduate-level question-answering benchmark designed to be ``Google-proof.'' We use the diamond subset for its highest quality annotations.
+
+% TODO: Finalize sample sizes and splits after pilot experiments.
 
 \subsection{Models}
 \label{sec:models}
 
-% TODO: Describe models used as solvers and critics
-% GPT-4o, Claude Sonnet, Llama-3.1-70B
+We use three model families to ensure generality of findings:
+
+\begin{itemize}
+    \item \textbf{GPT-4o} (OpenAI): A state-of-the-art proprietary model.
+    \item \textbf{Claude Sonnet} (Anthropic): A competitive proprietary model from a different developer.
+    \item \textbf{Llama-3.1-70B-Instruct} (Meta): An open-source model served via vLLM.
+\end{itemize}
+
+Each model serves as both solver (generating chain-of-thought solutions) and critic (evaluating solutions under different identity conditions). This design allows us to measure self-critique bias within each model family.
 
 \subsection{Identity Swap Critique Framework}
 \label{sec:identity-swap}
 
-% TODO: Describe the 5 identity conditions
-% Self, Other model, Weak model, Anonymous, Human
+The core experimental design presents the \emph{same solution} to the critic model under five authorship labels, varying only the identity preamble:
+
+\begin{enumerate}
+    \item \textbf{\textsc{Self}}: ``This is your previous solution. Please review your own work.''
+    \item \textbf{\textsc{Other Model}}: ``This solution was generated by [Model X]. Please review it.''
+    \item \textbf{\textsc{Weak Model}}: ``This solution was generated by a small, less capable model. Please review it.''
+    \item \textbf{\textsc{Anonymous}}: ``Here is a solution. Please review it.''
+    \item \textbf{\textsc{Human}}: ``A student wrote this solution. Please review it.''
+\end{enumerate}
+
+The solution text, problem statement, and all other prompt components remain identical across conditions. Solutions are generated once per (model, dataset) pair and reused across all identity conditions to ensure a controlled comparison.
 
 \subsection{Context Separation Conditions}
 \label{sec:context-separation}
 
-% TODO: Describe the 5 context conditions
-% Same session, New session, New session + anonymous, New session + paraphrased, Cross-model
+To disentangle identity bias from context anchoring, we conduct a second experiment with five context conditions:
+
+\begin{enumerate}
+    \item \textbf{Same Session}: The solution appears as the model's own prior assistant turn in the conversation, and the model is asked to review it within the same session.
+    \item \textbf{New Session}: The solution is presented in a fresh session with the \textsc{Self} label.
+    \item \textbf{New Session + Anonymous}: Fresh session with no authorship information.
+    \item \textbf{New Session + Paraphrased}: Fresh session with the solution paraphrased to reduce surface-pattern recognition.
+    \item \textbf{Cross-Model}: A different model performs the review.
+\end{enumerate}
+
+Comparing these conditions allows us to decompose how much of the self-correction gap is attributable to identity framing versus context anchoring.
 
 \subsection{Evaluation Metrics}
 \label{sec:metrics}
 
-% TODO: Describe metrics
-% Error detection accuracy, localization accuracy, correction accuracy, FPR, confidence calibration
+For each critique, the model provides a structured JSON response indicating (1) whether the solution contains an error, (2) the error location, (3) a corrected answer, and (4) a confidence score. We compute:
 
+\begin{itemize}
+    \item \textbf{Error Detection Accuracy}: Whether the critic correctly identifies the presence or absence of errors.
+    \item \textbf{True Positive Rate (TPR)}: Fraction of actually incorrect solutions flagged as erroneous.
+    \item \textbf{False Positive Rate (FPR)}: Fraction of correct solutions incorrectly flagged.
+    \item \textbf{Correction Accuracy}: Whether the critic's corrected answer matches the ground truth.
+    \item \textbf{Confidence Calibration}: Expected Calibration Error (ECE) between stated confidence and actual accuracy.
+\end{itemize}
+
+%% ============================================================
 \section{Experiment 1: Identity Swap Critique}
 \label{sec:exp1}
+%% ============================================================
 
 % TODO: Results showing critique varies by authorship label
+% Expected structure:
+% - Main results table: Detection accuracy, TPR, FPR, correction accuracy per condition per model
+% - Key finding: Self condition shows lower TPR / higher FPR than Anonymous/Other
+% - Statistical significance tests (McNemar's test for paired comparisons)
+% - Figure: Bar chart of detection accuracy across 5 conditions
 
+%% ============================================================
 \section{Experiment 2: Context Separation}
 \label{sec:exp2}
+%% ============================================================
 
 % TODO: Results decomposing attribution bias vs. context anchoring
+% Expected structure:
+% - Comparison table: Same session vs. New session vs. New session + anonymous
+% - Quantify: How much of the gap is context anchoring vs. identity bias
+% - Figure: Decomposition showing relative contribution of each factor
 
+%% ============================================================
 \section{Experiment 3: Mitigation Strategies}
 \label{sec:exp3}
+%% ============================================================
 
 % TODO: Results showing simple protocol changes improve correction
-% Anonymization, paraphrasing, new session review, multi-agent critique
+% Expected structure:
+% - Baseline (Self) vs. each mitigation
+% - Show improvement in detection accuracy and correction accuracy
+% - Cost analysis: mitigations are free (no additional API calls for anonymization)
+% - Compare with more expensive alternatives (multi-agent, cross-model)
 
+%% ============================================================
 \section{Analysis}
 \label{sec:analysis}
+%% ============================================================
 
 % TODO: Additional analyses
-% - Task difficulty vs. bias magnitude
-% - Model size effects
-% - Confidence calibration across conditions
-% - False correction rates
-% - Context length effects
+% - Task difficulty vs. bias magnitude: Is identity bias stronger for harder problems?
+% - Model size effects: Do larger models show more or less identity bias?
+% - Confidence calibration across conditions: Are models better calibrated when anonymous?
+% - False correction rates: Do models more often flip correct→incorrect under Self?
+% - Context length effects: Does bias increase with longer solutions?
 
+%% ============================================================
 \section{Discussion}
 \label{sec:discussion}
+%% ============================================================
 
 % TODO: Discuss implications
-% - Self-correction failures as protocol design problems
-% - Practical guidelines for LLM evaluation
-% - Limitations of current approach
+% Key points:
+% - Self-correction is not a reasoning limitation but a protocol design problem
+% - Simple mitigations (anonymization, session separation) are effective and free
+% - Implications for LLM evaluation pipelines and deployment
+% - Connection to human cognitive biases (confirmation bias, anchoring)
+% - When to use cross-model review vs. anonymized self-review
 
 \section*{Limitations}
 
 % TODO: Discuss limitations
+% - Limited to reasoning tasks; may not generalize to open-ended generation
+% - Identity labels are surface-level; models may use other cues
+% - JSON output format may constrain critique expressiveness
+% - Sample sizes and model selection
+% - Prompt sensitivity
 
 \section*{Acknowledgments}
 
@@ -144,11 +246,11 @@ Large language models (LLMs) are widely known to struggle with self-correction, 
 \section{Prompt Templates}
 \label{sec:prompts}
 
-% TODO: Include full prompt templates for each condition
+% TODO: Include full prompt templates for each condition (system + user prompts)
 
 \section{Additional Results}
 \label{sec:additional-results}
 
-% TODO: Additional tables and figures
+% TODO: Per-dataset breakdowns, per-difficulty analyses, additional figures
 
 \end{document}

@@ -1,36 +1,98 @@
 % Identity Bias in LLM Self-Critique - Bibliography
 
+% =============================================================
 % Self-correction in LLMs
-@article{huang2024selfcorrection,
+% =============================================================
+
+@inproceedings{huang2024selfcorrection,
     title={Large Language Models Cannot Self-Correct Reasoning Yet},
     author={Huang, Jie and Chen, Xinyun and Mishra, Swaroop and Zheng, Huaixiu Steven and Yu, Adams Wei and Song, Xinying and Zhou, Denny},
-    journal={arXiv preprint arXiv:2310.01798},
+    booktitle={Proceedings of the International Conference on Learning Representations (ICLR)},
     year={2024}
 }
 
 @article{kamoi2024selfcorrection,
-    title={When Can LLMs Actually Correct Their Own Mistakes? A Critical Survey of Self-Correction of LLMs},
-    author={Kamoi, Ryo and Ashok, Yusen and Nan, Lun Du and Hou, Baian and Zhang, Shunyu and Peng, Nanyun and Roth, Dan},
+    title={When Can {LLMs} Actually Correct Their Own Mistakes? A Critical Survey of Self-Correction of {LLMs}},
+    author={Kamoi, Ryo and Zhang, Yusen and Zhang, Nan and Han, Jiawei and Zhang, Rui},
     journal={arXiv preprint arXiv:2406.01297},
     year={2024}
 }
 
-% Self-preference bias
-@article{zheng2024judging,
-    title={Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena},
-    author={Zheng, Lianmin and Chiang, Wei-Lin and Sheng, Ying and Zhuang, Siyuan and Wu, Zhanghao and Zhuang, Yonghao and Lin, Zi and Li, Zhuohan and Li, Dacheng and Xing, Eric and others},
-    journal={Advances in Neural Information Processing Systems},
-    year={2024}
+@article{tsui2025blindspot,
+    title={Self-Correction Bench: Uncovering and Addressing the Self-Correction Blind Spot in Large Language Models},
+    author={Tsui, Ken},
+    journal={arXiv preprint arXiv:2507.02778},
+    year={2025}
 }
 
+@inproceedings{madaan2023selfrefine,
+    title={Self-Refine: Iterative Refinement with Self-Feedback},
+    author={Madaan, Aman and Tandon, Niket and Gupta, Prakhar and Hallinan, Skyler and Gao, Luyu and Wiegreffe, Sarah and Alon, Uri and Dziri, Nouha and Prabhumoye, Shrimai and Yang, Yiming and Gupta, Shashank and Majumder, Bodhisattwa Prasad and Hermann, Katherine and Welleck, Sean and Yazdanbakhsh, Amir and Clark, Peter},
+    booktitle={Advances in Neural Information Processing Systems (NeurIPS)},
+    year={2023}
+}
+
+% =============================================================
+% Self-preference and self-attribution bias
+% =============================================================
+
 @article{panickssery2024selfpreference,
-    title={LLM Evaluators Recognize and Favor Their Own Generations},
+    title={{LLM} Evaluators Recognize and Favor Their Own Generations},
     author={Panickssery, Arjun and Bowman, Samuel R. and Feng, Shi},
     journal={arXiv preprint arXiv:2404.13076},
     year={2024}
 }
 
-% Multi-agent debate
+@article{wataoka2024selfpreference,
+    title={Self-Preference Bias in {LLM}-as-a-Judge},
+    author={Wataoka, Koki and Takahashi, Tsubasa and Ri, Ryokan},
+    journal={arXiv preprint arXiv:2410.21819},
+    year={2024}
+}
+
+@article{lehr2025extremeselfpreference,
+    title={Extreme Self-Preference in Language Models},
+    author={Lehr, Steven A. and Cipperman, Mary and Banaji, Mahzarin R.},
+    journal={arXiv preprint arXiv:2509.26464},
+    year={2025}
+}
+
+@article{xu2024pride,
+    title={Pride and Prejudice: {LLM} Amplifies Self-Bias in Self-Refinement},
+    author={Xu, Wenda and Zhu, Guanglei and Zhao, Xuandong and Pan, Liangming and Li, Lei and Wang, William Yang},
+    journal={arXiv preprint arXiv:2402.11436},
+    year={2024}
+}
+
+% =============================================================
+% Source framing and attribution bias
+% =============================================================
+
+@article{germani2025sourceframing,
+    title={Source framing triggers systematic evaluation bias in Large Language Models},
+    author={Germani, Federico and Spitale, Giovanni},
+    journal={Science Advances},
+    volume={11},
+    number={45},
+    year={2025},
+    note={arXiv preprint arXiv:2505.13488}
+}
+
+% =============================================================
+% Context anchoring and cross-context review
+% =============================================================
+
+@article{song2026crosscontext,
+    title={Cross-Context Review: Improving {LLM} Output Quality by Separating Production and Review Sessions},
+    author={Song, Tae-Eun},
+    journal={arXiv preprint arXiv:2603.12123},
+    year={2026}
+}
+
+% =============================================================
+% Multi-agent debate and cross-model review
+% =============================================================
+
 @article{du2023debate,
     title={Improving Factuality and Reasoning in Language Models through Multiagent Debate},
     author={Du, Yilun and Li, Shuang and Torralba, Antonio and Tenenbaum, Joshua B. and Mordatch, Igor},
@@ -45,7 +107,32 @@
     year={2023}
 }
 
+% =============================================================
+% LLM-as-a-Judge
+% =============================================================
+
+@inproceedings{zheng2024judging,
+    title={Judging {LLM}-as-a-Judge with {MT-Bench} and Chatbot Arena},
+    author={Zheng, Lianmin and Chiang, Wei-Lin and Sheng, Ying and Zhuang, Siyuan and Wu, Zhanghao and Zhuang, Yonghao and Lin, Zi and Li, Zhuohan and Li, Dacheng and Xing, Eric and others},
+    booktitle={Advances in Neural Information Processing Systems (NeurIPS)},
+    year={2024}
+}
+
+% =============================================================
+% Critique benchmarks
+% =============================================================
+
+@inproceedings{lin2024criticbench,
+    title={{CriticBench}: Benchmarking {LLMs} for Critique-Correct Reasoning},
+    author={Lin, Zicheng and Gou, Zhibin and Liang, Tian and Luo, Ruilin and Liu, Haowei and Yang, Yujiu},
+    booktitle={Findings of the Association for Computational Linguistics (ACL)},
+    year={2024}
+}
+
+% =============================================================
 % Datasets
+% =============================================================
+
 @article{cobbe2021gsm8k,
     title={Training Verifiers to Solve Math Word Problems},
     author={Cobbe, Karl and Kosaraju, Vineet and Bavarian, Mohammad and Chen, Mark and Jun, Heewoo and Kaiser, Lukasz and Plappert, Matthias and Tworek, Jerry and Hilton, Jacob and Nakano, Reiichiro and others},
@@ -53,32 +140,27 @@
     year={2021}
 }
 
-@article{hendrycks2021math,
-    title={Measuring Mathematical Problem Solving With the MATH Dataset},
+@inproceedings{hendrycks2021math,
+    title={Measuring Mathematical Problem Solving With the {MATH} Dataset},
     author={Hendrycks, Dan and Burns, Collin and Kadavath, Saurav and Arora, Akul and Basart, Steven and Tang, Eric and Song, Dawn and Steinhardt, Jacob},
-    journal={NeurIPS},
+    booktitle={Advances in Neural Information Processing Systems (NeurIPS)},
     year={2021}
 }
 
 @article{rein2023gpqa,
-    title={GPQA: A Graduate-Level Google-Proof Q\&A Benchmark},
+    title={{GPQA}: A Graduate-Level Google-Proof Q\&A Benchmark},
     author={Rein, David and Hou, Betty Li and Stickland, Asa Cooper and Petty, Jackson and Pang, Richard Yuanzhe and Dirani, Julien and Michael, Julian and Bowman, Samuel R.},
     journal={arXiv preprint arXiv:2311.12022},
     year={2023}
 }
 
-% Source framing
-@article{xu2024pride,
-    title={Pride and Prejudice: LLM Amplifies Self-Bias in Self-Refinement},
-    author={Xu, Wenda and Schlegel, Viktor and Tanner, Sheryl and Birch, Alexandra and Iacobacci, Ignacio and Chen, Shanshan},
-    journal={arXiv preprint arXiv:2402.11436},
-    year={2024}
-}
+% =============================================================
+% Chain-of-thought prompting
+% =============================================================
 
-% Chain-of-thought
-@article{wei2022cot,
+@inproceedings{wei2022cot,
     title={Chain-of-Thought Prompting Elicits Reasoning in Large Language Models},
     author={Wei, Jason and Wang, Xuezhi and Schuurmans, Dale and Bosma, Maarten and Ichter, Brian and Xia, Fei and Chi, Ed H. and Le, Quoc V. and Zhou, Denny},
-    journal={Advances in Neural Information Processing Systems},
+    booktitle={Advances in Neural Information Processing Systems (NeurIPS)},
     year={2022}
 }
