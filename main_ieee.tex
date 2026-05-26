@@ -18,6 +18,15 @@
 \usepackage[numbers,sort&compress]{natbib}
 \usepackage{hyperref}
 \usepackage{url}
+% Defensive stubs: if Overleaf's TeX Live has lineno hooks left over from a
+% prior compile of the ACL version (main.tex uses acl.sty which loads lineno),
+% \@LN@col can appear in the aux file and break a fresh main_ieee compile.
+% These no-op definitions absorb the call without affecting layout.
+\makeatletter
+\providecommand{\@LN@col}[1]{}
+\providecommand{\linenumbers}{}
+\providecommand{\nolinenumbers}{}
+\makeatother
 \newcommand{\far}{\mathrm{FAR}}
 \newcommand{\tar}{\mathrm{TAR}}
 
