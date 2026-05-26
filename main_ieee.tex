@@ -182,34 +182,21 @@ The primary pre-specified contrast is \textsc{Verdict+Repair} versus \textsc{Ver
 
 Before considering source labels or repair requests, the critics already accept a large fraction of wrong solutions. In the legacy full-call sweeps, false-accept rates are 55.9\% for Gemma-4, 77.1\% for \texttt{gpt-oss-no-think}, and 56.9\% for \texttt{qwen3-no-think}. The neutral verdict-only ablation arms remain high: 46.7\%, 64.0\%, and 57.9\%, respectively. These values show that the main reliability problem is not a small identity gap but a broad failure to reject flawed reasoning.
 
-\begin{table*}[t]
+\begin{table}[t]
 \centering
 \small
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{llrrrr}
+\begin{tabular}{lrrrr}
 \toprule
-Critic & Interface & $n_w$ & FAR & $n_c$ & FRR \\
+Critic & $n_w$ & FAR & $n_c$ & FRR \\
 \midrule
-Gemma-4 & Legacy full & 725 & 55.9 & 737 & 7.5 \\
-Gemma-4 & Verdict-only instructed & 332 & 45.5 & 200 & 11.5 \\
-Gemma-4 & Verdict-only neutral & 332 & 46.7 & 200 & 7.5 \\
-Gemma-4 & Verdict+repair & 332 & 51.2 & 200 & 6.5 \\
-\midrule
-\texttt{gpt-oss-no-think} & Legacy full & 4961 & 77.1 & 3811 & 6.8 \\
-\texttt{gpt-oss-no-think} & Verdict-only instructed & 347 & 60.8 & 193 & 11.9 \\
-\texttt{gpt-oss-no-think} & Verdict-only neutral & 347 & 64.0 & 193 & 9.8 \\
-\texttt{gpt-oss-no-think} & Verdict+repair & 347 & 68.6 & 193 & 8.8 \\
-\midrule
-\texttt{qwen3-no-think} & Legacy full & 7115 & 56.9 & 8909 & 13.8 \\
-\texttt{qwen3-no-think} & Verdict-only instructed & 356 & 46.9 & 171 & 15.2 \\
-\texttt{qwen3-no-think} & Verdict-only neutral & 356 & 57.9 & 171 & 11.7 \\
-\texttt{qwen3-no-think} & Verdict+repair & 356 & 58.4 & 171 & 12.3 \\
+Gemma-4               & 725  & 55.9 & 737  & 7.5 \\
+\texttt{gpt-oss-no-think} & 4961 & 77.1 & 3811 & 6.8 \\
+\texttt{qwen3-no-think}   & 7115 & 56.9 & 8909 & 13.8 \\
 \bottomrule
 \end{tabular}
-}
-\caption{Baseline false-accept rate (FAR) on wrong solutions and false-rejection rate (FRR) on correct solutions, pooled over datasets for the listed interface. Rates are percentages. Legacy full rows come from the original full-call source-framing sweeps; the other rows come from the prompt-interface ablation sample.}
+\caption{Baseline false-accept rate (FAR) on wrong solutions and false-rejection rate (FRR) on correct solutions, pooled over datasets and source-framing conditions in the legacy full-call sweep. Rates are percentages. Per-interface FAR for the prompt-interface ablation sample is reported in Table~\ref{tab:caveat-a}.}
 \label{tab:baseline-far}
-\end{table*}
+\end{table}
 
 \subsection{Verdict+Repair Increases False Acceptance in the Initial Two-Stage Diagnostic}
 \label{sec:results-repair}
@@ -268,12 +255,12 @@ Gemma-4 & 332 & 45.5 & 46.7 & 46.2 & 51.2 & +4.5 [+2.1, +7.2] & -1.2 \\
 \label{tab:caveat-a}
 \end{table*}
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig2_caveat_a_forest.png}
 \caption{Prompt-interface contrasts from the Caveat A ablation. Positive values indicate higher false acceptance relative to the neutral verdict-only prompt. Repair coupling increases FAR for Gemma-4 and \texttt{gpt-oss-no-think}, but not for \texttt{qwen3-no-think}.}
 \label{fig:caveat-a}
-\end{figure*}
+\end{figure}
 
 \subsection{Per-Dataset Heterogeneity}
 \label{sec:results-heterogeneity}
@@ -282,12 +269,12 @@ The repair-request effect is concentrated in hard short-answer mathematics. Figu
 
 Leave-one-dataset-out analysis sharpens the interpretation. Gemma-4 remains positive even when AIME is removed, falling from +4.5 points to +2.7 points (95\% CI [0.7, 5.0], $n=300$). In contrast, \texttt{gpt-oss-no-think} falls from +4.6 points to +1.7 points without AIME (95\% CI [-3.0, 6.3], $n=300$). The \texttt{gpt-oss-no-think} repair effect is therefore best described as AIME-driven rather than broadly stable across datasets. \texttt{qwen3-no-think} remains null under every leave-one-dataset-out exclusion.
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{figures/fig5_caveat_a_per_dataset.png}
+\includegraphics[width=\linewidth]{figures/fig5_caveat_a_per_dataset.png}
 \caption{Per-dataset repair-request contrasts from the Caveat A ablation. Positive values indicate higher FAR under \textsc{Verdict+Repair} than under \textsc{Verdict-Only Neutral}. The effect is robust for Gemma-4 but concentrated in AIME for \texttt{gpt-oss-no-think}; \texttt{qwen3-no-think} is null overall.}
 \label{fig:caveat-a-dataset}
-\end{figure*}
+\end{figure}
 
 \subsection{Mechanism: Schema-Order Sensitivity Is Critic-Dependent}
 \label{sec:results-field-order}
