@@ -1,17 +1,10 @@
-\documentclass[11pt]{article}
+% IEEE Access submission version of the manuscript.
+% Uses IEEEtran (journal mode) as a stand-in for ieeeaccess.cls;
+% the official Access template is a thin wrapper around IEEEtran.
+% IEEEtran.cls and IEEEtran.bst are checked in to this directory so
+% the file compiles without modifying the system TeX installation.
+\documentclass[journal]{IEEEtran}
 
-% Draft note for IEEE Access submission:
-% This manuscript intentionally keeps the repository's ACL layout for drafting
-% and reproducible local compilation. Before final IEEE Access submission,
-% switch the class and bibliography style to the official IEEE Access template
-% (or IEEEtran if instructed by the venue). Do not overwrite the checked-in
-% acl.sty or acl_natbib.bst files; install ieeeaccess.cls / IEEEtran.cls
-% separately and update only this manuscript's class, front matter, and
-% bibliography commands.
-\usepackage[review]{acl}
-
-\usepackage{times}
-\usepackage{latexsym}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{microtype}
@@ -21,17 +14,24 @@
 \usepackage{amssymb}
 \usepackage{multirow}
 \usepackage{subcaption}
+\usepackage{cite}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{hyperref}
+\usepackage{url}
 \newcommand{\far}{\mathrm{FAR}}
 \newcommand{\tar}{\mathrm{TAR}}
 
-\title{When Asking for a Fix Changes the Verdict: Coupling Repair with Evaluation Can Increase Over-Acceptance in LLM Critique}
+\title{When Asking for a Fix Changes the Verdict:\\Coupling Repair with Evaluation Can Increase Over-Acceptance in LLM Critique}
 
-\author{First Author \\
-  Affiliation \\
-  \texttt{email@domain} \\\And
-  Second Author \\
-  Affiliation \\
-  \texttt{email@domain} \\}
+\author{
+  First~Author,~\IEEEmembership{Member,~IEEE,}
+  and~Second~Author,~\IEEEmembership{Member,~IEEE}%
+  \thanks{The authors are with the Affiliation.
+          E-mail: \texttt{email@domain}.}
+}
+
+\markboth{IEEE Access, Vol.~XX, No.~Y, Month~2026}%
+{Author \MakeLowercase{\textit{et al.}}: Coupling Repair with Evaluation in LLM Critique}
 
 \begin{document}
 \maketitle
@@ -547,6 +547,7 @@ The project repository is organized to make the analysis artifacts traceable to 
 
 Acknowledgments will be added in the final author version.
 
+\bibliographystyle{IEEEtran}
 \bibliography{refs}
 
 \appendix

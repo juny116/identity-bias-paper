@@ -1,0 +1,12 @@
+critic,arm,macro_ECE_10bin
+gemma-4,legacy_full,0.2181657903216137
+gemma-4,verdict_only_neutral,0.29614566395663955
+gemma-4,verdict_plus_repair,0.2745365853658536
+gpt-oss-no-think,legacy_full,0.3506331366193463
+gpt-oss-no-think,verdict_only_neutral,0.3724907407407408
+gpt-oss-no-think,verdict_plus_repair,0.3852592592592592
+gpt-oss-think,legacy_full,0.27266371653863447
+qwen3,legacy_full,0.23265352262354508
+qwen3-no-think,legacy_full,0.26338417261787284
+qwen3-no-think,verdict_only_neutral,0.4601155746509323
+qwen3-no-think,verdict_plus_repair,0.4191670047877075

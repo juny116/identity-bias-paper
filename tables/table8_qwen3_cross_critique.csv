@@ -1,0 +1,2 @@
+critic,solver,design,FAR_neutral,FAR_repair,delta_repair_vs_neutral_pp,CI_low_pp,CI_high_pp,n_paired
+qwen3-no-think,gpt-oss-think,cross-critique,0.49096385542168675,0.4759036144578313,-1.5060240963855422,-3.614457831325301,0.30120481927710846,332
