@@ -209,29 +209,28 @@ The initial two-stage diagnostic compares a verdict-only call against a verdict-
 
 These results suggest that the standard correction-oriented interface changes verdict behavior. However, the original verdict-only prompt included an explicit instruction not to produce a corrected answer. The next subsection therefore reports the Caveat A ablation, which tests whether the effect survives under a neutral verdict-only prompt and a schema-matched control. As shown there, this initial result overstates the repair-request mechanism for \texttt{qwen3-no-think}.
 
-\begin{table*}[t]
+\begin{table}[t]
 \centering
-\small
-\resizebox{\textwidth}{!}{%
+\footnotesize
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{lrrrrr}
 \toprule
-Critic & $n$ & FAR$_{\mathrm{initial}}$ & FAR$_{\mathrm{full}}$ & $\Delta$ pp & 95\% CI \\
+Critic & $n$ & FAR$_{\mathrm{init}}$ & FAR$_{\mathrm{full}}$ & $\Delta$ pp & 95\% CI \\
 \midrule
-\texttt{gpt-oss-no-think} & 5100 & 68.3 & 77.3 & +9.0 & [+7.9, +10.2] \\
-\texttt{qwen3-no-think} & 4444 & 47.4 & 56.0 & +8.6 & [+7.6, +9.5] \\
+gpt-oss-no-think & 5100 & 68.3 & 77.3 & +9.0 & [+7.9, +10.2] \\
+qwen3-no-think   & 4444 & 47.4 & 56.0 & +8.6 & [+7.6, +9.5] \\
 \bottomrule
 \end{tabular}
-}
-\caption{Initial Phase E two-stage diagnostic. The full call asks for a corrected answer in addition to the verdict; the initial call is the original verdict-only instructed prompt. Rates are percentages and deltas are percentage points.}
+\caption{Initial Phase E two-stage diagnostic. Full call asks for verdict and corrected answer; initial call is the verdict-only instructed prompt. Rates are percentages, deltas are percentage points.}
 \label{tab:phasee}
-\end{table*}
+\end{table}
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig1_paired_repair_inflation.png}
 \caption{Pre-ablation diagnostic. Both critics show large apparent verdict-plus-repair inflation relative to the original verdict-only instructed prompt; later ablations show that this diagnostic overstates the repair mechanism for \texttt{qwen3-no-think}.}
 \label{fig:phasee}
-\end{figure}
+\end{figure*}
 
 \subsection{Caveat A Ablation: Separating Repair Request, No-Repair Instruction, and Schema Complexity}
 \label{sec:results-caveat-a}
@@ -260,12 +259,12 @@ Gemma-4 & 332 & 45.5 & 46.7 & 46.2 & 51.2 & +4.5 [+2.1, +7.2] & -1.2 \\
 \label{tab:caveat-a}
 \end{table*}
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig2_caveat_a_forest.png}
 \caption{Prompt-interface contrasts from the Caveat A ablation. Positive values indicate higher false acceptance relative to the neutral verdict-only prompt. Repair coupling increases FAR for Gemma-4 and \texttt{gpt-oss-no-think}, but not for \texttt{qwen3-no-think}.}
 \label{fig:caveat-a}
-\end{figure}
+\end{figure*}
 
 \subsection{Per-Dataset Heterogeneity}
 \label{sec:results-heterogeneity}
@@ -290,12 +289,12 @@ For \texttt{gpt-oss-no-think}, the standard verdict-first repair arm raises FAR 
 
 Gemma-4 rules out a universal generation-order mechanism. Its standard verdict-first repair arm raises FAR by 4.5 points, but its answer-first reversed arm raises FAR by 7.2 points relative to neutral, 2.7 points higher than the standard repair arm. The per-dataset pattern is also mixed: reversed reduces the AIME inflation but worsens GPQA and MMLU-Pro and leaves Olympiad unchanged relative to standard repair. For Gemma-4, putting \texttt{corrected\_answer} first may pressure the model to produce or accommodate a correction even when the error is not resolved, and then accept the wrong candidate alongside that generated answer. The defensible mechanism claim is therefore narrower: schema-field order is a real interface variable, but its direction is critic-specific.
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig6_field_order_mechanism.png}
 \caption{Field-order ablation for \texttt{gpt-oss-no-think}. The standard verdict-first repair prompt increases FAR, while the answer-first repair prompt returns to the neutral/schema-matched baseline. Gemma-4 shows the opposite directional result in Table~\ref{tab:field-order}, so this figure should be read as critic-specific mechanism evidence rather than a universal generation-order account.}
 \label{fig:field-order}
-\end{figure}
+\end{figure*}
 
 \begin{table}[t]
 \centering
@@ -352,19 +351,19 @@ The \textsc{Weak Model} condition consistently lowers false acceptance relative 
 
 The \textsc{Strong Model} falsifier rules out a clean competence axis. If critics were simply using expected source competence as a symmetric prior, strong-source framing should increase false acceptance by an amount comparable to the weak-source decrease. Instead, \textsc{Strong Model} is near null for Gemma and \texttt{gpt-oss-no-think}, and only mildly positive for \texttt{qwen3-no-think}. We therefore describe low-competence framing as an asymmetric skepticism cue rather than evidence for a monotonic competence scale. Sparse strong-source rows for thinking variants are not interpreted because they were run on very small subsets.
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig3_weak_per_critic_forest.png}
 \caption{Effect of \textsc{Weak Model} framing on false acceptance relative to \textsc{Anonymous}. Negative values indicate reduced false acceptance.}
 \label{fig:weak-forest}
-\end{figure}
+\end{figure*}
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig4_weak_strong_asymmetry.png}
 \caption{Weak and strong source-framing contrasts relative to anonymous framing. Strong-source framing does not consistently mirror the weak-source effect, so the competence-axis interpretation is not supported. Gray bars mark sparse strong-source runs that are excluded from the main interpretation.}
 \label{fig:weak-strong}
-\end{figure}
+\end{figure*}
 
 \subsection{Framing Effects Do Not Always Occur at the Same Stage}
 \label{sec:results-stage}
@@ -420,12 +419,12 @@ Gemma-4 & other & 332 & 50.0 & 46.4 & -3.6 & 91.0 / 93.0 & 3.5 / 3.5 \\
 
 We also compare the gated protocol against a five-sample majority-voting baseline using temperature 0.7. N-of-K majority voting is not better than gating. For Gemma-4, N-of-K is within 0.3 points of gated in both anonymous and other-model conditions. For \texttt{gpt-oss-no-think}, N-of-K is 0.9 points below gated in anonymous and 0.3 points above gated in self. For \texttt{qwen3-no-think}, N-of-K is worse than gated by 1.7 to 2.7 points. Because N-of-K requires five critic calls and does not dominate the one-call gated verdict stage, the recommended intervention remains gated verdict logging before repair.
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig7_n_of_k_vs_gated.png}
 \caption{Mitigation comparison among one-shot verdict-plus-repair, gated verdict-then-repair, and five-sample majority voting. N-of-K is approximately tied with gated for Gemma-4 and \texttt{gpt-oss-no-think} and worse for \texttt{qwen3-no-think}.}
 \label{fig:nofk-gated}
-\end{figure}
+\end{figure*}
 
 \subsection{Repair Quality Remains Poor After Correct Rejection}
 \label{sec:results-repair-quality}
@@ -434,12 +433,12 @@ Separating verdict from repair is also necessary because repair quality is weak 
 
 The field-order ablation improves repair success as well as verdict behavior for \texttt{gpt-oss-no-think}, but with a safety tradeoff. In the standard verdict-first repair arm, macro repair success is 21.4\% across datasets; in the answer-first reversed arm, it rises to 25.5\%. However, macro harmful correction also rises from 75.0\% to 83.9\%, and Gemma-4's reversed arm reaches 100\% macro harmful correction among falsely rejected correct solutions. The practical recommendation is therefore not to deploy answer-first repair as a standalone fix. Reversed schema can reduce FAR for one critic, but it should be paired with a separate harmful-correction check and reported independently from verdict reliability.
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig9_repair_success_per_arm.png}
 \caption{Repair success among wrong solutions that the critic correctly rejected. Success remains low across critics; the \texttt{gpt-oss-no-think} answer-first field-order arm improves repair success relative to the standard verdict-first repair arm.}
 \label{fig:repair-quality}
-\end{figure}
+\end{figure*}
 
 \subsection{Cross-Critique Generalization}
 \label{sec:results-cross}
@@ -884,30 +883,29 @@ Gemma-4 & Verdict+repair reversed & Olympiad & 59 & 15.3 & 1 & 100.0 \\
 \label{tab:per-dataset-repair-quality}
 \end{table*}
 
-\begin{table*}[h]
+\begin{table}[h]
 \centering
-\small
-\resizebox{\textwidth}{!}{%
+\footnotesize
+\setlength{\tabcolsep}{3pt}
 \begin{tabular}{llrr}
 \toprule
-Critic & Arm & Macro repair success & Macro harmful correction \\
+Critic & Arm & Rep.\,Succ. & Harmful \\
 \midrule
 Gemma-4 & Legacy full & 21.4 & 66.1 \\
 Gemma-4 & Verdict+repair & 18.3 & 82.1 \\
-Gemma-4 & Verdict+repair reversed & 20.4 & 100.0 \\
-\texttt{gpt-oss-no-think} & Legacy full & 18.2 & 77.4 \\
-\texttt{gpt-oss-no-think} & Verdict+repair & 21.4 & 75.0 \\
-\texttt{gpt-oss-no-think} & Verdict+repair reversed & 25.5 & 83.9 \\
-\texttt{gpt-oss-think} & Legacy full & 39.1 & 48.5 \\
-\texttt{qwen3} & Legacy full & 18.9 & 67.2 \\
-\texttt{qwen3-no-think} & Legacy full & 10.4 & 69.4 \\
-\texttt{qwen3-no-think} & Verdict+repair & 10.2 & 63.3 \\
+Gemma-4 & Reversed & 20.4 & 100.0 \\
+gpt-oss-no-think & Legacy full & 18.2 & 77.4 \\
+gpt-oss-no-think & Verdict+repair & 21.4 & 75.0 \\
+gpt-oss-no-think & Reversed & 25.5 & 83.9 \\
+gpt-oss-think & Legacy full & 39.1 & 48.5 \\
+qwen3 & Legacy full & 18.9 & 67.2 \\
+qwen3-no-think & Legacy full & 10.4 & 69.4 \\
+qwen3-no-think & Verdict+repair & 10.2 & 63.3 \\
 \bottomrule
 \end{tabular}
-}
-\caption{Equal-dataset-weighted repair quality summary from \texttt{appendix\_macro\_repair\_quality.csv}. Rates are percentages. The macro summary confirms that repair-quality conclusions are not driven by pooled legacy-data weighting.}
+\caption{Equal-dataset-weighted repair-quality summary (\texttt{appendix\_macro\_repair\_quality.csv}). Rep.\,Succ.\ = repair-success rate among correctly rejected wrong items. Harmful = harmful-correction rate among falsely rejected correct items. Rates are percentages.}
 \label{tab:macro-repair-quality}
-\end{table*}
+\end{table}
 
 \begin{table*}[h]
 \centering
@@ -938,10 +936,10 @@ Gemma-4 & Verdict+repair & 1596 & 0.290 & 0.944 & 0.659 \\
 \label{tab:calibration}
 \end{table*}
 
-\begin{table*}[h]
+\begin{table}[h]
 \centering
-\small
-\resizebox{\textwidth}{!}{%
+\footnotesize
+\setlength{\tabcolsep}{3pt}
 \begin{tabular}{llr}
 \toprule
 Critic & Arm & Macro ECE$_{10}$ \\
@@ -949,20 +947,19 @@ Critic & Arm & Macro ECE$_{10}$ \\
 Gemma-4 & Legacy full & 0.218 \\
 Gemma-4 & Verdict-only neutral & 0.296 \\
 Gemma-4 & Verdict+repair & 0.275 \\
-\texttt{gpt-oss-no-think} & Legacy full & 0.351 \\
-\texttt{gpt-oss-no-think} & Verdict-only neutral & 0.372 \\
-\texttt{gpt-oss-no-think} & Verdict+repair & 0.385 \\
-\texttt{gpt-oss-think} & Legacy full & 0.273 \\
-\texttt{qwen3} & Legacy full & 0.233 \\
-\texttt{qwen3-no-think} & Legacy full & 0.263 \\
-\texttt{qwen3-no-think} & Verdict-only neutral & 0.460 \\
-\texttt{qwen3-no-think} & Verdict+repair & 0.419 \\
+gpt-oss-no-think & Legacy full & 0.351 \\
+gpt-oss-no-think & Verdict-only neutral & 0.372 \\
+gpt-oss-no-think & Verdict+repair & 0.385 \\
+gpt-oss-think & Legacy full & 0.273 \\
+qwen3 & Legacy full & 0.233 \\
+qwen3-no-think & Legacy full & 0.263 \\
+qwen3-no-think & Verdict-only neutral & 0.460 \\
+qwen3-no-think & Verdict+repair & 0.419 \\
 \bottomrule
 \end{tabular}
-}
-\caption{Equal-dataset-weighted ECE summary from \texttt{appendix\_macro\_calibration.csv}. The \texttt{qwen3-no-think} interface-dependent calibration shift remains visible under macro averaging.}
+\caption{Equal-dataset-weighted ECE summary (\texttt{appendix\_macro\_calibration.csv}). The \texttt{qwen3-no-think} interface-dependent calibration shift remains visible under macro averaging.}
 \label{tab:macro-calibration}
-\end{table*}
+\end{table}
 
 \begin{figure*}[h]
 \centering
