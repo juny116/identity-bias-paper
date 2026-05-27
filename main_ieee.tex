@@ -246,33 +246,72 @@ qwen3-no-think   & 4444 & 47.4 & 56.0 & +8.6 & [+7.6, +9.5] \\
 \label{tab:phasee}
 \end{table}
 
-Parser-aware replay changes the interpretation of the Caveat A repair contrast. The verdict-plus-repair prompt produces more malformed structured outputs than the neutral verdict-only prompt. Because the production fallback maps parse failure to \texttt{is\_correct=True}, parse failures on wrong items become false accepts under the included parsed-output metric. When pairs containing a parse failure are excluded, the apparent Gemma-4 repair effect collapses from +4.52 points to -0.34 points, and the gpt-oss-no-think contrast weakens from +4.61 points to +1.42 points with a confidence interval crossing zero. qwen3-no-think remains negative under both analyses. Per-dataset replay shows the same pattern: Gemma-4 AIME moves from +21.9 points to 0.0, Gemma-4 Olympiad moves from +8.0 to 0.0, and gpt-oss-no-think AIME is reduced from +23.4 to +12.0.
+Parser-aware replay changes the interpretation of the Caveat A prompt contrasts. The verdict-plus-repair prompt produces more malformed structured outputs than the neutral verdict-only prompt. Because the production fallback maps parse failure to \texttt{is\_correct=True}, parse failures on wrong items become false accepts under the included parsed-output metric. When pairs containing a parse failure are excluded, three kinds of interface effects emerge. Some apparent effects are pure parser artifacts: the Gemma-4 verdict-plus-repair contrast collapses from +4.52 points to -0.34 points. Some weaken: the gpt-oss-no-think verdict-plus-repair contrast moves from +4.61 points to +1.42 points with a confidence interval crossing zero. Others survive as behavioral effects: qwen3-no-think remains lower-FAR under the instructed arm (-5.99 points), the schema-matched arm (-3.37 points), and the verdict-plus-repair arm (-3.80 points) after parse-failure exclusion (Table~\ref{tab:parse-aware-all}).
 
-The correct conclusion is therefore not that verdict-plus-repair robustly increases false acceptance as a behavioral verdict effect. The correct conclusion is that repair-coupled structured prompts are measurement-unsafe unless parse failures are explicitly logged and analyzed. The included metric remains relevant for end-to-end system behavior because malformed output is a real interface failure; the excluded metric is necessary for isolating behavioral verdict changes from parser artifacts.
+The correct conclusion is therefore not that verdict-plus-repair robustly increases false acceptance as a behavioral verdict effect. The correct conclusion is that repair-coupled structured prompts are measurement-unsafe unless parse failures are explicitly logged and analyzed. The included metric remains relevant for end-to-end system behavior because malformed output is a real interface failure; the excluded metric is necessary for isolating behavioral verdict changes from parser artifacts. The parser-artifact pattern is also not specific to anonymous source framing: Gemma-4 verdict-plus-repair contrasts collapse after parse-failure exclusion for anonymous (+4.52 to -0.34), other-model (+3.61 to -0.68), and weak-model (+5.42 to 0.00) conditions, and gpt-oss-no-think shows the same pattern across anonymous, self, and weak-model conditions.
+
+\begin{table*}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrrrr}
+\toprule
+Critic & Contrast vs neutral & Included $\Delta$ & Included CI & Excluded $\Delta$ & Excluded CI \\
+\midrule
+Gemma-4 & Instructed & -1.20 & [-2.71, +0.00] & -0.91 & [-2.42, +0.30] \\
+Gemma-4 & Schema-matched & -0.60 & [-1.51, +0.00] & -0.61 & [-1.52, +0.00] \\
+Gemma-4 & Verdict+repair & +4.52 & [+2.11, +7.23] & -0.34 & [-1.37, +0.69] \\
+Gemma-4 & Answer-first repair & +7.23 & [+4.22, +10.54] & +4.49 & [+1.60, +7.38] \\
+\midrule
+gpt-oss-no-think & Instructed & -3.17 & [-7.49, +1.15] & -3.06 & [-6.80, +0.68] \\
+gpt-oss-no-think & Schema-matched & +0.29 & [-4.03, +4.61] & +0.34 & [-3.73, +4.75] \\
+gpt-oss-no-think & Verdict+repair & +4.61 & [+0.00, +9.22] & +1.42 & [-3.19, +6.03] \\
+gpt-oss-no-think & Answer-first repair & +0.29 & [-3.75, +4.32] & +0.34 & [-3.06, +3.74] \\
+\midrule
+qwen3-no-think & Instructed & -7.01 & [-9.59, -4.43] & -5.99 & [-8.61, -3.37] \\
+qwen3-no-think & Schema-matched & -3.69 & [-6.27, -1.11] & -3.37 & [-5.81, -0.94] \\
+qwen3-no-think & Verdict+repair & -2.95 & [-5.72, +0.00] & -3.80 & [-6.64, -1.14] \\
+\bottomrule
+\end{tabular}
+}
+\caption{Parser-aware Caveat A contrasts on anonymous wrong items. Included contrasts use the production parsed-output metric, where parse failure falls back to acceptance. Excluded contrasts remove pairs containing a parse failure. Deltas and intervals are percentage points.}
+\label{tab:parse-aware-all}
+\end{table*}
+
+Fallback policy is itself an interface choice. If malformed responses are mapped to acceptance, Gemma-4's verdict-plus-repair contrast is +4.52 points. If the same malformed responses are mapped to rejection, the contrast becomes -7.53 points. If parse-failure pairs are dropped, the contrast is -0.34 points. Thus the sign of the headline Gemma-4 repair contrast is determined by the parser policy rather than by a stable behavioral verdict shift. gpt-oss-no-think likewise loses its apparent positive contrast under non-accept policies, while qwen3-no-think remains negative across policies (Table~\ref{tab:policy-sensitivity}).
 
 \begin{table}[t]
 \centering
 \footnotesize
 \setlength{\tabcolsep}{3pt}
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{lrrrr}
+\begin{tabular}{llrr}
 \toprule
-Critic & Parse fail N/R & Included $\Delta$ & Excluded $\Delta$ & Excluded CI \\
+Critic & Policy & $\Delta$ pp & 95\% CI \\
 \midrule
-Gemma-4 & 0.5 / 8.3 & +4.52 & -0.34 & [-1.37, +0.69] \\
-gpt-oss-no-think & 7.7 / 10.6 & +4.61 & +1.42 & [-3.19, +6.03] \\
-qwen3-no-think & 1.4 / 3.1 & -2.95 & -3.80 & [-6.64, -1.14] \\
+Gemma-4 & Accept parse fail & +4.52 & [+2.11, +7.23] \\
+Gemma-4 & Reject parse fail & -7.53 & [-10.54, -4.52] \\
+Gemma-4 & Drop parse fail & -0.34 & [-1.37, +0.69] \\
+\midrule
+gpt-oss-no-think & Accept parse fail & +4.61 & [+0.00, +9.22] \\
+gpt-oss-no-think & Reject parse fail & +1.15 & [-2.89, +5.19] \\
+gpt-oss-no-think & Drop parse fail & +1.42 & [-3.19, +6.03] \\
+\midrule
+qwen3-no-think & Accept parse fail & -2.95 & [-5.72, +0.00] \\
+qwen3-no-think & Reject parse fail & -4.61 & [-7.38, -1.85] \\
+qwen3-no-think & Drop parse fail & -3.82 & [-6.50, -1.15] \\
 \bottomrule
 \end{tabular}
 }
-\caption{Parser-aware Verdict+Repair minus Verdict-Only Neutral contrast on anonymous wrong items. Parse fail N/R gives neutral and repair parse-failure rates. Included contrasts use the production parsed-output metric; excluded contrasts remove any pair with a parse failure. Deltas and intervals are percentage points.}
-\label{tab:parse-aware}
+\caption{Fallback-policy sensitivity for Verdict+Repair minus Verdict-Only Neutral on anonymous wrong items. The Gemma-4 sign reversal shows that parser fallback is part of the measured interface, not a neutral implementation detail.}
+\label{tab:policy-sensitivity}
 \end{table}
 
 \subsection{Instruction and Schema Perturbations Still Shift Verdicts}
 \label{sec:results-caveat-a}
 
-The parser finding does not mean that all interface effects disappear. The explicit no-repair instruction and schema-matched controls still move verdict behavior, especially for qwen3-no-think. In the Caveat A ablation, the explicit no-repair instruction lowers FAR by 11.0 points relative to the neutral verdict-only prompt for qwen3-no-think, by 3.2 points for gpt-oss-no-think, and by 1.2 points for Gemma-4. The qwen3-no-think schema-matched arm also lowers FAR by 5.9 points relative to neutral. In the GEE robustness model, qwen3-no-think has strongly negative coefficients for both the instructed arm (coefficient -0.484, $p<0.001$) and schema-matched arm (coefficient -0.239, $p<0.001$). These effects are not explained by the Gemma-4 repair-parser artifact.
+The parser finding does not mean that all interface effects disappear. The explicit no-repair instruction and schema-matched controls still move verdict behavior, especially for qwen3-no-think. In the Caveat A ablation, the explicit no-repair instruction lowers FAR by 11.0 points relative to the neutral verdict-only prompt for qwen3-no-think, by 3.2 points for gpt-oss-no-think, and by 1.2 points for Gemma-4. The qwen3-no-think schema-matched arm also lowers FAR by 5.9 points relative to neutral. Under parser-aware exclusion on anonymous wrong items, the qwen3-no-think instructed and schema-matched contrasts remain negative and significant at -5.99 and -3.37 points, respectively. In the GEE robustness model, qwen3-no-think has strongly negative coefficients for both the instructed arm (coefficient -0.484, $p<0.001$) and schema-matched arm (coefficient -0.239, $p<0.001$). These effects are not explained by the Gemma-4 repair-parser artifact.
 
 \begin{table}[t]
 \centering
@@ -289,7 +328,7 @@ qwen3-no-think & 46.9 & 57.9 & 52.0 & 58.4 \\
 \bottomrule
 \end{tabular}
 }
-\caption{Caveat A prompt-interface ablation under the original included parsed-output metric. FAR columns are percentages on actually wrong solutions. Parser-aware repair contrasts are reported separately in Table~\ref{tab:parse-aware}.}
+\caption{Caveat A prompt-interface ablation under the original included parsed-output metric. FAR columns are percentages on actually wrong solutions. Parser-aware prompt contrasts are reported separately in Table~\ref{tab:parse-aware-all}.}
 \label{tab:caveat-a}
 \end{table}
 
@@ -320,12 +359,12 @@ gpt-oss-no-think Schema--Neutral     & 0.9540 & 0.9540 \\
 
 The field-order ablation asks whether schema layout itself is an interface perturbation. In the standard \textsc{Verdict+Repair} arm, the model emits \texttt{is\_correct} before generating \texttt{corrected\_answer}. In the reversed arm, the prompt asks for \texttt{corrected\_answer} before \texttt{is\_correct}. This manipulation changes the structured response channel and the measured verdict, but not in a universal direction.
 
-For gpt-oss-no-think, the answer-first arm returns the included parsed-output contrast close to the neutral/schema-matched baseline. For Gemma-4, the answer-first arm increases the included FAR even more than the standard repair arm. Given the parser-aware repair finding, this result should not be read as a single generation-order mechanism. It is evidence that field order is itself part of the measurement interface and can interact with model behavior and structured-output reliability differently across critics.
+For gpt-oss-no-think, the answer-first arm returns the included parsed-output contrast close to the neutral/schema-matched baseline and remains null after parse-failure exclusion. For Gemma-4, the answer-first arm increases the included FAR even more than the standard repair arm, and the effect survives parser-aware exclusion: +7.23 points under the included metric and +4.49 points after excluding parse-failure pairs. Given that the standard Gemma-4 verdict-plus-repair contrast collapses under the same exclusion, the answer-first result is not merely the same parser artifact. It is evidence that field order is itself part of the measurement interface and can interact with model behavior and structured-output reliability differently across critics.
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig6_field_order_mechanism.png}
-\caption{Field-order ablation for gpt-oss-no-think and Gemma-4 under the included parsed-output metric. Answer-first repair returns gpt-oss-no-think to the neutral/schema-matched baseline but further increases Gemma-4 false acceptance, showing critic-dependent schema-order sensitivity rather than a universal generation-order mechanism.}
+\caption{Field-order ablation for gpt-oss-no-think and Gemma-4 under the included parsed-output metric. Answer-first repair returns gpt-oss-no-think to the neutral/schema-matched baseline but further increases Gemma-4 false acceptance, showing critic-dependent schema-order sensitivity rather than a universal generation-order mechanism. Parser-aware contrasts are reported in Table~\ref{tab:parse-aware-all}.}
 \label{fig:field-order}
 \end{figure*}
 
@@ -335,18 +374,16 @@ For gpt-oss-no-think, the answer-first arm returns the included parsed-output co
 \resizebox{\linewidth}{!}{%
 \begin{tabular}{llrr}
 \toprule
-Critic & Contrast & $\Delta$ pp & 95\% CI \\
+Critic & Contrast & Incl. $\Delta$ & Excl. $\Delta$ \\
 \midrule
-gpt-oss-no-think & Instructed--Neutral & -3.2 & [-7.5, +1.2] \\
-gpt-oss-no-think & Schema--Neutral & +0.3 & [-4.0, +4.6] \\
-gpt-oss-no-think & Repair verdict-first--Neutral & +4.6 & [+0.0, +9.2] \\
-gpt-oss-no-think & Repair answer-first--Neutral & +0.3 & [-4.0, +4.3] \\
-Gemma-4 & Repair verdict-first--Neutral & +4.5 & [+2.1, +7.2] \\
-Gemma-4 & Repair answer-first--Neutral & +7.2 & n/a \\
+gpt-oss-no-think & Repair verdict-first--Neutral & +4.6 & +1.4 \\
+gpt-oss-no-think & Repair answer-first--Neutral & +0.3 & +0.3 \\
+Gemma-4 & Repair verdict-first--Neutral & +4.5 & -0.3 \\
+Gemma-4 & Repair answer-first--Neutral & +7.2 & +4.5 \\
 \bottomrule
 \end{tabular}
 }
-\caption{Field-order contrasts on the Caveat A sample under the included parsed-output metric. The answer-first arm asks for \texttt{corrected\_answer} before \texttt{is\_correct}.}
+\caption{Field-order contrasts on the Caveat A sample. Included uses the production parsed-output metric; excluded removes parse-failure pairs. The answer-first arm asks for \texttt{corrected\_answer} before \texttt{is\_correct}. Values are percentage points relative to \textsc{Verdict-Only Neutral}.}
 \label{tab:field-order}
 \end{table}
 
@@ -496,12 +533,12 @@ Gemma-4 & 0.258 & 0.314 & 0.290 & +0.056 \\
 \subsection{What the Paper Shows}
 \label{sec:discussion-shows}
 
-The main result is that LLM critic verdicts are interface-contingent measurements. In this correction-oriented setup, ordinary identity labels produce small shifts, while prompt-interface perturbations change verdict outcomes, parse reliability, calibration, and downstream repair behavior. The repair-coupled prompt was the motivating case, but parser-aware replay shows that the strongest apparent repair effect is artifact-dominated. The broader finding is more general: a single structured critic call should not be treated as a stable measurement of model judgment unless the output contract and parser behavior are part of the measurement.
+The main result is that LLM critic verdicts are interface-contingent measurements. In this correction-oriented setup, ordinary identity labels produce small shifts, while prompt-interface perturbations change verdict outcomes, parse reliability, calibration, and downstream repair behavior. The repair-coupled prompt was the motivating case, but parser-aware replay separates the effects into three categories: pure parser artifacts, weakened effects, and robust behavioral shifts. The behavioral core is the qwen3-no-think instruction and schema sensitivity and the Gemma-4 answer-first field-order effect. The measurement core is that the largest apparent verdict-plus-repair contrast can change sign under different parser fallback policies. A single structured critic call should therefore not be treated as a stable measurement of model judgment unless the output contract and parser behavior are part of the measurement.
 
 \subsection{Why the Parser Finding Matters}
 \label{sec:discussion-parser}
 
-The parser finding is not a nuisance detail. It is a substantive measurement result. A structured-output critic can fail in two ways at once: it can make the wrong judgment, or it can produce an output that the evaluation pipeline maps into a judgment. When the fallback maps malformed responses to acceptance, parse failures on wrong items mechanically increase FAR. This does not make the interface harmless; it means the interface is even less suitable as a clean verdict channel. The included parsed-output metric measures the deployed structured interface, while parser-aware exclusion helps isolate behavioral verdict changes.
+The parser finding is not a nuisance detail. It is a substantive measurement result. A structured-output critic can fail in two ways at once: it can make the wrong judgment, or it can produce an output that the evaluation pipeline maps into a judgment. When the fallback maps malformed responses to acceptance, parse failures on wrong items mechanically increase FAR. When the same failures are mapped to rejection, the sign of the Gemma-4 verdict-plus-repair contrast reverses. This does not make the interface harmless; it means the fallback policy is itself part of the interface being evaluated. The included parsed-output metric measures the deployed structured interface, while parser-aware exclusion helps isolate behavioral verdict changes.
 
 \subsection{Practical Recommendations}
 \label{sec:discussion-practical}
@@ -776,7 +813,7 @@ Gemma-4 & Olympiad & 232 & +3.0 & +0.4 & +6.0 \\
 \bottomrule
 \end{tabular}
 }
-\caption{Leave-one-dataset-out Caveat A repair-request contrasts under the included parsed-output metric. These rows are retained as a deployed-interface diagnostic; parser-aware replay in Table~\ref{tab:parse-aware} and Table~\ref{tab:appendix-caveat-dataset} supersedes them for behavioral verdict interpretation.}
+\caption{Leave-one-dataset-out Caveat A repair-request contrasts under the included parsed-output metric. These rows are retained as a deployed-interface diagnostic; parser-aware replay in Table~\ref{tab:parse-aware-all} and Table~\ref{tab:appendix-caveat-dataset} supersedes them for behavioral verdict interpretation.}
 \label{tab:loo-caveat-a}
 \end{table*}
 
