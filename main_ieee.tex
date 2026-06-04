@@ -46,59 +46,70 @@
 \maketitle
 
 \begin{abstract}
-Large language models (LLMs) are increasingly used as critics that judge candidate solutions and, in the same structured response, propose repairs. This paper asks whether such a critic call is a stable measurement of the critic's verdict. We test source labels, repair requests, schema variants, field order, confidence reporting, and repair generation across reasoning benchmarks and critic families. The main result is not a universal effect of repair requests, but a broader measurement problem: prompt-interface perturbations move verdict and measurement outcomes more than ordinary identity labels. Parser-aware replay shows why this distinction matters: apparent verdict-plus-repair false-acceptance inflation can be dominated by malformed structured outputs combined with a permissive parser fallback. Repair quality and confidence reporting do not rescue the pipeline, since successful repairs remain uncommon, harmful correction remains possible, and confidence-based abstention can preserve or even concentrate high-confidence false accepts. We therefore recommend separating measurement from intervention: elicit and log a neutral verdict, including parse status, before requesting any repair, and report verdict accuracy, parse failures, repair success, harmful correction, and calibration as distinct failure modes.
+Large language models (LLMs) are increasingly used as judges for benchmark construction, model selection, and critique-repair pipelines. Such evaluations usually specify the judge model, but they often treat the judge-side interface as an implementation detail. This paper studies a narrower measurement confound: benign output-interface choices, including schema shape, field order, rubric structure, score-versus-verdict order, and repair coupling. Holding judged content fixed and using constrained decoding, we ask whether these choices interact differently with different judge models, so that model-comparison conclusions depend on the interface. This is not the familiar claim that prompts matter in general; it is a claim about the judge-model by interface interaction that can affect the apparent leaderboard. Repair coupling is a particularly important case because a system may ask for a verdict and a correction in the same call, even though those are distinct tasks. We further use parser-aware replay as a methodological safeguard, separating behavioral verdict changes from measurement artifacts when structured outputs fail. The resulting recommendation is procedural: LLM-as-judge reports should standardize and disclose the judge interface, treat output handling as part of the evaluation protocol, and avoid comparing judge models under an unspecified or single unexamined interface.
 \end{abstract}
 
 \section{Introduction}
 \label{sec:intro}
 
-Large language models are now routinely asked to evaluate other model outputs. They serve as automated judges in benchmark construction, graders in reasoning pipelines, critics in self-refinement systems, and repair agents in applications where an initial answer must be checked before it is returned to a user. In these settings, a critic is often prompted to perform two operations at once: decide whether a proposed solution is correct and, if it is not, produce a corrected answer. This coupling is convenient. It also creates a methodological risk. If the interface changes either the verdict or the reliability with which that verdict can be parsed, then measured critique quality is partly a property of the measurement channel rather than only a property of the model's reasoning ability.
+Large language models are now routinely used to evaluate other model outputs. They grade benchmark answers, select among system variants, provide feedback for refinement pipelines, and stand in for human preference annotators when human evaluation is too slow or expensive. In these settings, the judge model is usually named and compared, while the judge-side interface is treated as a prompt-engineering detail. A leaderboard may report that judge model A is more reliable than judge model B under one rubric, output schema, or scoring protocol, and leave open whether the same conclusion would hold under another benign interface.
 
-Prior work on self-correction has mostly emphasized whether LLMs can improve their own answers without external feedback. The empirical picture is mixed and often negative: intrinsic self-correction is unreliable on reasoning tasks, can fail to detect errors, and can even degrade initially correct answers \citep{huang2024selfcorrection, kamoi2024selfcorrection}. Iterative self-refinement methods demonstrate that models can improve some outputs when prompted to critique and revise, but reasoning tasks remain difficult because the model must first identify a substantive error before revision is useful \citep{madaan2023selfrefine}. These results motivate a closer look at the first step of correction-oriented systems: the verdict.
+This paper studies that gap. We define a judge-side output interface as the response contract imposed on the judge: whether it emits a free verdict or rubric checklist, whether it gives a score before or after a binary verdict, whether the schema contains a correction field, and whether a requested correction is produced before or after the verdict. These choices are benign in the sense that they do not adversarially perturb the candidate answer being judged. They are also common: production evaluation code often asks judges for JSON, confidence scores, explanations, rubrics, or repairs in a single call.
 
-Two explanations for critique failure are plausible. One is source bias: a critic may trust or distrust a solution depending on whether it is labeled as self-authored, human-authored, produced by another model, or produced by a weak or strong model. The other is interface brittleness: the critic's measured verdict may depend on the output contract, schema, field order, repair request, or parser behavior used to collect that verdict. This paper compares these explanations by holding solution content fixed while varying both source labels and critique interfaces.
+The claim is not simply that LLMs are prompt-sensitive. General prompt-format sensitivity is already well established \citep{sclar2024spurious, mizrahi2024multiprompt}, and LLM-as-judge work has documented position, length, provenance, and prompt effects \citep{zheng2024judging, dubois2024length, eiras2025know}. Our claim is an interaction claim. If each judge model responded to interface changes in the same way, model comparisons might shift in absolute level while preserving conclusions. The methodological risk arises when interface sensitivity differs by judge model: the estimated gap between judges, the statistical significance of that gap, or even the ranking of adjacent judges can change under fixed judged content.
 
-The central finding is that interface variation is larger and more operationally consequential than ordinary identity variation. Across the critics for which both measurements are available, the range induced by prompt-interface arms is several times larger than the range induced by the four ordinary identity labels. The most important lesson is not that one particular repair prompt universally makes critics over-accept wrong answers. Parser-aware replay shows that the strongest apparent verdict-plus-repair effect is dominated by malformed structured outputs and a permissive fallback that maps parse failure to acceptance. The broader and more defensible claim is that a single structured critic call is a brittle measurement instrument unless verdict, parse status, confidence, and repair quality are logged separately.
+We therefore hold the judged content fixed. Each judge sees the same problem, the same candidate solution, and the same ground-truth-checkable task instance; only the judge-side interface changes. We use constrained decoding for the final verdict object so that literal JSON parse failures do not drive the main comparison. Parser-aware replay remains part of the methodology, but as an audit: it distinguishes behavioral interface effects from measurement artifacts when structured outputs fail. The primary estimand is the judge-model by interface interaction, measured through false-accept rate, false-reject rate, balanced accuracy, pairwise judge gaps, and interface-specific rankings.
 
-The article makes four contributions. First, it quantifies the contrast between source-label effects and prompt-interface effects, showing that interface variation dominates ordinary identity-label variation in this correction-oriented setting. Second, it audits parser sensitivity in verdict-plus-repair prompts and shows that naive parsed-output contrasts can misstate behavioral verdict effects. Third, it reports additional interface perturbations, including instruction effects, schema-order sensitivity, calibration shifts, thinking-versus-no-thinking comparisons, and confidence-based abstention curves. Fourth, it evaluates repair quality and end-to-end pipeline utility, motivating a practical measurement protocol: elicit and log a neutral verdict with parse status before requesting any repair.
+Repair coupling is the most distinctive interface axis in this study. Self-refinement and critique-repair systems ask whether feedback and revision improve a generated answer \citep{madaan2023selfrefine, gou2024critic, lin2024criticbench}. We ask a different question: whether asking the judge to repair a candidate solution changes the verdict used to decide whether repair is needed in the first place. A verdict-first interface, a repair-coupled interface, and a repair-then-verdict interface are not merely cosmetic variants if they induce different judge policies.
+
+As a preliminary motivation for the final experiments, an AIME pilot with three local judge configurations found that a repair-then-verdict interface can change the top adjacent comparison under balanced accuracy, while other interfaces preserve the opposite ordering. The finalized Results section will report the full multi-dataset analysis after all runs are frozen; the point here is the design principle. A single judge interface is not a neutral lens on judge ability unless this invariance is tested.
+
+The article makes four contributions. First, it isolates benign judge-side output-interface choices under fixed judged content and constrained decoding, separating this question from general prompt sensitivity and response-side perturbation work. Second, it tests judge-model by interface interactions directly, using model-comparison stability rather than only absolute judge accuracy as the target. Third, it studies repair coupling and repair/verdict order as evaluation-interface variables, a setting not addressed by standard self-refinement studies that focus on whether the final solution improves. Fourth, it treats parser-aware replay and non-verdict accounting as methodological safeguards rather than headline effects, clarifying when structured-output artifacts do or do not explain observed interface sensitivity.
 
 \section{Background and Related Work}
 \label{sec:related}
 
-\subsection{Self-Correction in LLMs}
-\label{sec:rw-self-correction}
-
-Self-correction asks a model to identify and fix errors in its own output, usually without external tools or oracle feedback. Early work on self-refinement showed that iterative generate--critique--revise loops can improve some generations, especially when feedback is explicit and the task rewards local revision \citep{madaan2023selfrefine}. Reasoning tasks are harder. A critique must identify a mathematical, logical, or factual error before a revision can help, and an unjustified revision may turn a correct answer into an incorrect one. Huang et al.\ report that large language models cannot reliably self-correct reasoning yet, and broader surveys reach similar conclusions about intrinsic self-correction without external verification \citep{huang2024selfcorrection, kamoi2024selfcorrection}.
-
-Recent self-correction benchmarks sharpen this concern by distinguishing solution production from solution review. The self-correction blind spot describes cases where models fail to identify mistakes in outputs attributed to themselves but can detect similar errors in external outputs \citep{tsui2025blindspot}. This literature motivates our initial identity-swap design. However, our data suggest that in a correction-oriented JSON critique interface, the larger and more stable failure mode is not identity-specific blindness but over-acceptance of wrong solutions across source labels.
-
-\subsection{LLM-as-Judge Calibration and Reliability}
+\subsection{LLM-as-Judge Evaluation and Protocol Confounds}
 \label{sec:rw-judge}
 
-LLM-as-judge systems use models to evaluate candidate outputs, often replacing or augmenting human evaluation. Such judges can be useful, but their reliability depends on calibration, prompt design, and the match between the judgment task and the model's capabilities. Zheng et al.\ show that LLM judges can reproduce some human preferences in chat evaluation while remaining sensitive to position, verbosity, and presentation effects \citep{zheng2024judging}. Prior work already shows that LLM confidence can be miscalibrated and that elicitation strategy affects verbalized confidence \citep{tian2023justask}. Critique benchmarks similarly show that stronger models tend to be better critics, but critique quality remains far from solved on reasoning tasks \citep{lin2024criticbench}.
+LLM-as-judge systems use language models to evaluate candidate outputs, often replacing or augmenting human evaluation. MT-Bench and Chatbot Arena popularized model-based judging for open-ended chat evaluation and documented important judge biases, including position and verbosity effects \citep{zheng2024judging}. AlpacaEval made similar automatic evaluation practical at scale, and Length-Controlled AlpacaEval showed that even a single response-side confound, output length, can substantially distort automatic win rates unless explicitly controlled \citep{dubois2024length}. Safety-judge robustness work similarly shows that judge decisions can be sensitive to style and adversarial perturbations in the judged output \citep{eiras2025know}.
 
-Our work does not claim overconfidence itself as a new phenomenon. Instead, we ask whether the same prompt-interface choices that change verdict behavior also change the calibration of the critic's reported confidence. A high false-accept rate means the critic approves incorrect reasoning and prevents downstream correction from even being attempted. This is distinct from correction quality conditional on rejection. A repair agent can only fix an error if the verdict stage first declares that the solution is flawed. The results therefore report verdict metrics separately from repair metrics whenever possible.
+These studies establish that LLM-as-judge evaluation is not a simple readout of latent response quality. They do not, however, isolate the judge-side output interface while holding judged content fixed. Our focus is not whether a candidate answer is longer, more adversarially phrased, or attributed to a different source. It is whether the response contract imposed on the judge changes the measurement of judge reliability and changes comparisons among judge models.
 
-\subsection{Self-Preference and Authorship Attribution}
-\label{sec:rw-self-preference}
+Recent meta-evaluation work studies related but distinct protocol sensitivities. JudgeSense measures per-judge sensitivity to semantically equivalent prompt paraphrases, providing a single-judge stability benchmark rather than testing whether the same interface perturbation changes cross-judge model comparisons \citep{bellibatlu2026judgesense}. Zhang studies safety benchmark sensitivity to judge prompt wording, finding harmful-rate shifts up to 24.2 percentage points and moderately stable safety rankings under one main safety-classification setting \citep{zhang2026judgeconfig}. Tripathi et al.\ compare pairwise and pointwise feedback protocols and show that protocol choice affects bias and preference stability, with pairwise preferences flipping much more often than pointwise judgments under their perturbations \citep{tripathi2025pairwise}. Our experiment targets a different object: benign judge-side output-interface choices under fixed judged content, constrained decoding, and objective ground truth, with the judge-model by interface interaction as the primary estimand.
 
-Self-preference work shows that LLM evaluators can favor their own generations or generations attributed to their own identity. Panickssery et al.\ find that LLM evaluators recognize and favor their own outputs, while Wataoka et al.\ relate self-preference bias to distributional familiarity in LLM-as-judge settings \citep{panickssery2024selfpreference, wataoka2024selfpreference}. Lehr et al.\ further argue that assigned identity can be sufficient to induce strong preference shifts, indicating that the label in the prompt can matter even when the underlying content is unchanged \citep{lehr2025extremeselfpreference}. Xu et al.\ report that self-bias can be amplified during self-refinement \citep{xu2024pride}.
-
-These findings provided the motivation for our identity conditions, but our empirical result differs from the strongest version of this prior expectation. In the present correction-oriented setup, ordinary identity labels produce small changes in false acceptance relative to the baseline over-acceptance rate. The difference does not imply that self-preference findings are wrong; it indicates that authorship attribution effects depend on the evaluation protocol, task, and output format. In our setting, interface design dominates identity framing.
-
-\subsection{Prompt-Format and Structured-Output Sensitivity}
+\subsection{Prompt Sensitivity Versus Interface Interaction}
 \label{sec:rw-prompt-format}
 
-LLM behavior is sensitive to prompt wording and response format. Source framing experiments demonstrate that identical content can receive different evaluations when attributed to different sources \citep{germani2025sourceframing}. Structured-output prompts introduce another layer of sensitivity because the requested fields define what the model believes the task is. A JSON schema that asks only for a verdict may elicit a different policy from one that asks for a verdict plus a corrected answer, even if both prompts begin with the same instruction to review the solution carefully.
+General LLM prompt sensitivity is well known. Sclar et al.\ show that seemingly spurious formatting choices can strongly affect model performance and do not transfer uniformly across models \citep{sclar2024spurious}. Mizrahi et al.\ argue that single-prompt evaluation is brittle and call for multi-prompt evaluation across models and tasks \citep{mizrahi2024multiprompt}. These results motivate caution, but they are broader than our claim. A model can be prompt-sensitive without invalidating a model comparison if all compared models shift similarly.
 
-This is the key methodological concern addressed by the Caveat A ablation. The first two-stage diagnostic used a verdict-only prompt that explicitly stated not to produce a corrected answer. That instruction may itself have increased skepticism. The new ablation therefore separates three factors: the absence of a repair field, the explicit no-repair instruction, and the presence of a schema slot for a corrected answer.
+The present study targets the interaction. We ask whether judge models respond differently to benign output-interface choices, so that the estimated gap between judges changes with the interface. The relevant object is therefore not only the variance of a single model across prompts, but the judge-model by interface term: schema shape, field order, score/verdict order, rubric structure, and repair coupling may induce different policies in different judges. This interaction is what makes an unreported judge interface a leaderboard confound.
+
+\subsection{Structured Outputs and Reasoning Under Constraints}
+\label{sec:rw-structured}
+
+Structured generation is widely used because evaluation pipelines need parseable fields. Tam et al.\ show that format restrictions such as JSON or XML can reduce LLM performance on reasoning and knowledge tasks, with stricter constraints often degrading performance more \citep{tam2024speak}. This is directly relevant because LLM-as-judge systems often require structured verdicts, scores, rationales, and corrections.
+
+Our design differs in two ways. First, we use constrained decoding to prevent literal JSON failures from dominating the main estimates. Second, we compare multiple structured interfaces under the same judged content. The question is not only whether structure hurts a single model, but whether alternative structured interfaces change the relative measured reliability of different judge models.
+
+\subsection{Source Bias, Self-Preference, and Judged-Content Perturbations}
+\label{sec:rw-source}
+
+Another line of work studies how the judged content or its attribution affects evaluation. LLM judges can show self-preference or source-framing effects, favoring outputs generated by themselves, familiar model families, or particular stated sources \citep{panickssery2024selfpreference, wataoka2024selfpreference, germani2025sourceframing}. These effects matter for benchmark design, but they manipulate the candidate answer, its provenance, or the metadata attached to it.
+
+We treat this literature as a contrast case. The present experiments keep the judged content anonymous and fixed. The candidate solution does not change, the solver identity is hidden, and the ground-truth label is fixed before judging. This lets us isolate the judge-side interface rather than a source label or response-side feature.
 
 \subsection{Critique-Repair Pipelines}
 \label{sec:rw-pipelines}
 
-Many self-improvement systems use a critique-repair pipeline: generate an answer, ask a model to critique it, and ask for a revision. Multi-agent debate and cross-model review methods extend this idea by using other models or agents to challenge an initial answer \citep{du2023debate, liang2023encouraging}. Cross-context review also suggests that separating production and review can improve output quality by reducing anchoring to the original generation process \citep{song2026crosscontext}.
+Self-correction and critique-repair methods ask whether feedback improves the final answer. Self-Refine uses iterative self-feedback and revision \citep{madaan2023selfrefine}; CRITIC adds tool-interactive feedback to support self-correction \citep{gou2024critic}; CriticBench evaluates critique-correct reasoning abilities across tasks and models \citep{lin2024criticbench}. These studies focus on the quality of the revised solution or the ability to generate useful feedback.
 
-Our contribution is narrower than multi-agent debate and simpler than model ensembles. We examine the interface inside a single critic call. A system can ask for a verdict first and a repair second, or it can ask for both at once. The distinction is small in implementation but large enough to change the measured false-accept rate. This makes critique-repair pipeline design a reliability issue, not merely a formatting preference.
+Our repair-coupling axis asks a different measurement question. In judge pipelines, the verdict often gates whether repair should happen at all. If a prompt asks the judge to both decide correctness and produce a corrected answer, the repair task may change the verdict itself. A repair-then-verdict interface is therefore not just a different repair strategy; it is a different judge measurement protocol. This distinction is especially important for leaderboards that compare judge models by verdict accuracy but do not standardize the repair or output contract.
+
+\subsection{Reasoning and Deliberation in Judge Interfaces}
+\label{sec:rw-deliberation}
+
+Reasoning traces and chain-of-thought prompting can improve some reasoning tasks \citep{wei2022cot}, but structured-output constraints can suppress or reshape how models externalize reasoning. The present study therefore treats reasoning as an interface variable rather than as an unobserved native capability. In the deliberation-in-schema robustness ablation, the judge is given an explicit reasoning field before the verdict inside the same constrained output object. This tests whether adding a controlled deliberation slot stabilizes judge comparisons across interfaces. It is not interpreted as a claim about private native chain-of-thought.
 
 \section{Methods}
 \label{sec:methods}
@@ -106,426 +117,228 @@ Our contribution is narrower than multi-agent debate and simpler than model ense
 \subsection{Task Setting}
 \label{sec:task-setting}
 
-Each experimental unit consists of a problem, a candidate solution, a ground-truth answer, a critic model, a source-framing condition, and a prompt-interface variant. The candidate solution includes the solver's reasoning trace and final answer. The critic receives the problem and solution and returns a structured assessment. The primary verdict outcome is whether the critic marks the solution as correct. For actually wrong solutions, marking the solution as correct is a false accept. For actually correct solutions, marking it as wrong is a false rejection.
+Each experimental unit consists of a problem, a fixed candidate solution, a ground-truth answer, a judge model, and a judge-side output interface. The candidate solution includes the solver's reasoning trace and final answer. The judge receives the same problem and candidate solution in every interface arm and returns a constrained structured verdict. The primary verdict outcome is whether the judge marks the solution as correct. For actually wrong candidate solutions, marking the solution as correct is a false accept. For actually correct candidate solutions, marking it as wrong is a false reject.
 
-The distinction between wrong and correct candidate solutions is determined before critique using dataset-specific answer checking. This design lets us measure the critic's verdict independently of whether its proposed repair is ultimately correct. When a repair is requested and supplied, we also evaluate whether the corrected answer matches the ground truth.
+The distinction between wrong and correct candidate solutions is determined before judging using dataset-specific answer checking. This fixed-content design isolates the judge-model by interface interaction: only the judge output contract changes, while the judged content, ground truth, source attribution, and candidate correctness label remain fixed. All main interface-confound runs use anonymous source attribution.
 
 \subsection{Datasets}
 \label{sec:datasets}
 
-Experiments use four reasoning datasets that differ in domain and answer format. AIME contains competition mathematics problems with short numeric answers. GPQA contains graduate-level scientific multiple-choice questions designed to require expert knowledge \citep{rein2023gpqa}. MMLU-Pro is used as a broad multiple-choice reasoning benchmark. Olympiad contains challenging mathematical problems. Earlier exploratory runs included BBH, but it was dropped from the main analysis because it was too easy for the present critique setup and did not stress the verdict stage enough.
+Experiments use four reasoning datasets that differ in domain and answer format. AIME contains competition mathematics problems with short numeric answers. GPQA contains graduate-level scientific multiple-choice questions designed to require expert knowledge \citep{rein2023gpqa}. MMLU-Pro is used as a broad multiple-choice reasoning benchmark. Olympiad contains challenging mathematical problems.
 
-The existing full sweeps cover AIME, GPQA, MMLU-Pro, and Olympiad. The Caveat A prompt-interface ablation samples from these same datasets using seed 42: candidate identifiers are shuffled once, then the first 100 actually wrong solutions and first 50 actually correct solutions are selected per dataset, using all available items when a dataset has fewer than the target. The cached sample identifiers are stored under \texttt{logs/caveat\_a\_samples/}. This sampling preserves paired comparisons across prompt variants while keeping the ablation small enough to run quickly.
+For each dataset, we sample 75 cached candidate solutions using seed 42: 50 actually wrong candidates and 25 actually correct candidates. Candidate identifiers are shuffled once before selection. The same 75 candidates are evaluated by every judge-interface cell. Before judging, candidate solutions that alone exceed the shared 32k context window are removed as uniform content-driven exclusions. The exclusions are identical across all judge and interface cells within a dataset: 9 AIME problem identifiers, 4 GPQA identifiers, 3 MMLU-Pro identifiers, and 10 Olympiad identifiers. The resulting analyzable pools contain 66, 71, 72, and 65 candidates, respectively, before any judge-specific non-verdicts.
 
 \subsection{Solver and Critic Models}
 \label{sec:models}
 
-The experiments include five critic configurations: qwen3, qwen3-no-think, gpt-oss-think, gpt-oss-no-think, and Gemma-4. The qwen3 and gpt-oss variants include thinking and no-thinking configurations, which are analyzed separately because their critique behavior differs. The main two-stage verdict-repair diagnostic was completed for qwen3-no-think and gpt-oss-no-think. The four-arm Caveat A ablation was completed for qwen3-no-think, gpt-oss-no-think, and Gemma-4. Gemma-4 is used as a cross-critic evaluating gpt-oss-think solutions, while the two no-thinking critics evaluate their own model-family solution pools.
+The no-deliberation matrix uses three local judge configurations: Gemma-4-no-think, gpt-oss-no-think, and qwen3-no-think. Each judge evaluates every dataset under every output interface, yielding 4500 attempted judgments before uniform context exclusions and transient non-verdicts: three judges, four datasets, five interfaces, and 75 candidate solutions per dataset.
 
-All main critics are served through the repository's model presets. qwen3-no-think uses \texttt{Qwen/Qwen3-32B} through vLLM with \texttt{enable\_thinking=False}; gpt-oss-no-think uses \texttt{openai/gpt-oss-20b} through vLLM with \texttt{reasoning\_effort=low}; Gemma-4 uses \texttt{google/gemma-4-31B-it} through vLLM. For all primary results in this paper (the Caveat A four-arm ablation, the field-order ablation, the gated mitigation pipeline, the N-of-K majority baseline, and the cross-critique replication), the critic experiment runners override the preset sampling parameters with \texttt{temperature=0.0} (deterministic decoding). The preset's default sampling parameters (\texttt{temperature=0.7} with \texttt{top\_p=0.8} and \texttt{top\_k=20} for qwen3-no-think; \texttt{temperature=0.7} for gpt-oss-no-think) were used only for some early legacy identity-swap sweeps; that data appears in this paper exclusively as legacy baseline context (Table~\ref{tab:baseline-far} and the broader source-framing summary), not in any prompt-interface contrast. Critic \texttt{max\_tokens} is set to 40000 for the local Qwen/gpt-oss critics and 12000 for Gemma-4. The default vLLM endpoint is \texttt{http://localhost:8000/v1}.
+All judges are served through the repository's local model presets. qwen3-no-think uses \texttt{Qwen/Qwen3-32B} with \texttt{enable\_thinking=False}; gpt-oss-no-think uses \texttt{openai/gpt-oss-20b} with \texttt{reasoning\_effort=low}; Gemma-4-no-think uses the Gemma-4 local serving configuration. The interface-confound runs use constrained JSON decoding through \texttt{response\_format=json\_schema} with strict schemas and a judge completion budget of \texttt{max\_tokens=16000}. The default endpoint is \texttt{http://localhost:8000/v1}.
 
-Candidate solutions are generated once and then reused across source-framing and prompt-interface conditions. This paired design ensures that changes in verdict behavior are attributable to the critic prompt or framing rather than to different underlying solution content.
-
-\subsection{Source-Framing Conditions}
-\label{sec:identity-conditions}
-
-The source-framing experiment presents the same solution under six labels. The \textsc{Self} condition describes the solution as the critic's previous solution. The \textsc{Other Model} condition describes it as generated by another AI model. The \textsc{Anonymous} condition gives no source information. The \textsc{Human} condition attributes the solution to a human student. The \textsc{Weak Model} condition attributes it to a weaker, less capable AI model. The \textsc{Strong Model} condition attributes it to a stronger model.
-
-The first four labels test ordinary authorship attribution. The weak and strong labels test whether source competence cues shift the critic's prior toward skepticism or deference. The pre-registered competence-axis prediction was that \textsc{Weak Model} would decrease false acceptance and \textsc{Strong Model} would increase false acceptance. Existing data support the first half but not the symmetric mirror pattern: \textsc{Weak Model} reduces false acceptance across critics, while \textsc{Strong Model} is near null for Gemma and gpt-oss-no-think and only mildly positive for qwen3-no-think.
+The secondary deliberation-in-schema run uses the same three judge families on AIME and GPQA. It does not rely on native private chain-of-thought modes. Instead, the constrained schema adds a required leading free-text \texttt{reasoning} field before the verdict fields, paired with an instruction to think step by step before emitting the verdict. This makes deliberation an explicit output-interface intervention.
 
 \subsection{Prompt-Interface Variants}
 \label{sec:prompt-variants}
 
-The central procedural variable is the critic's output contract. The standard verdict-plus-repair prompt asks the critic to decide whether the solution is correct, describe the error if any, provide a corrected answer, and report confidence. The initial verdict-only diagnostic removed the corrected-answer field and instructed the model not to produce a correction before giving the verdict.
-
-The Caveat A ablation expands this into four prompt-interface variants. The \textsc{Verdict-Only Instructed} variant is the original verdict-only prompt, including the explicit instruction not to produce a corrected answer. The \textsc{Verdict-Only Neutral} variant asks for the same three fields but removes the explicit no-repair instruction. The \textsc{Schema-Matched Verdict} variant uses the neutral verdict-only instructions but includes a fourth field, \texttt{corrected\_answer}, fixed to null, so that the response schema has the same number of fields as the repair prompt without requesting repair. The \textsc{Verdict+Repair} variant asks for the corrected final answer when the solution is judged wrong. Follow-up field-order ablations for gpt-oss-no-think and Gemma-4 add \textsc{Verdict+Repair Reversed}, which asks for \texttt{corrected\_answer} before \texttt{is\_correct}; this tests whether the verdict shift depends on schema-field order.
-
-These four arms identify whether the measured verdict changes with the repair task itself, with the earlier no-repair instruction, or with structured-output schema differences. The primary comparison is \textsc{Verdict+Repair} versus \textsc{Verdict-Only Neutral}. Secondary comparisons are \textsc{Verdict-Only Instructed} versus \textsc{Verdict-Only Neutral} and \textsc{Schema-Matched Verdict} versus \textsc{Verdict-Only Neutral}.
-
-\subsection{Two-Stage and Gated Critique Designs}
-\label{sec:two-stage}
-
-The two-stage diagnostic issues independent calls for verdict-only and verdict-plus-repair outputs. The calls share the same problem, solution, and source preamble, but they do not share conversational context. This independence avoids anchoring the repair call on the first verdict and lets us compare how the output contract changes first-pass judgment.
-
-The mitigation experiment uses a gated design. The critic first produces a neutral verdict-only assessment. If the verdict accepts the solution, the pipeline stops and records acceptance. If the verdict rejects the solution, a second repair prompt asks for a corrected answer. The gated design tests the practical recommendation implied by the main result: log a verdict before asking for repair, and request repair only after rejection. It is evaluated against the standard one-shot verdict-plus-repair pipeline on the same sampled items.
+The no-deliberation matrix uses five benign output interfaces. \textsc{Verdict-Only} asks for a binary correctness verdict and confidence. \textsc{Rubric-Verdict} asks the judge to evaluate a short rubric before returning the verdict. \textsc{Score-Then-Verdict} asks for a score before the binary verdict. \textsc{Verdict+Repair} asks for the verdict before a corrected answer field. \textsc{Repair-Then-Verdict} asks for the corrected answer field before the verdict. These variants change the judge-side response contract, not the judged content.
 
 \subsection{Logging Schema and Answer Checking}
 \label{sec:logging}
 
-Each critique record stores the problem identifier, dataset, solver model, critic model, source-framing condition, prompt-interface variant, parsed verdict, error description, corrected answer when applicable, confidence, raw response, token counts, and the precomputed correctness of the candidate solution. Ground-truth checking uses dataset-specific answer normalization. For short-answer mathematics datasets, the final answer is normalized before exact or symbolic comparison. For multiple-choice datasets, the selected option is compared against the answer key. Corrected answers are evaluated with the same checking function used for solver answers. The main verdict analyses do not depend on corrected-answer quality.
+Each judgment record stores the dataset, problem identifier, candidate identifier, judge model, output interface, parsed verdict, confidence when present, corrected answer when requested, raw response, token counts, non-verdict status, and the precomputed correctness of the candidate solution. Ground-truth checking uses dataset-specific answer normalization. For short-answer mathematics datasets, the final answer is normalized before exact or symbolic comparison. For multiple-choice datasets, the selected option is compared against the answer key. The main interface-confound analysis uses the verdict only; corrected answers are logged for secondary repair analyses.
 
-\subsection{Parse Handling and Parser-Aware Replay}
+\subsection{Coverage and Non-Verdict Handling}
 \label{sec:parse-handling}
 
-The structured-output parser tries direct JSON parsing, fenced-block extraction, and a regex search for a JSON object containing \texttt{is\_correct}. If all three fail, the production parser returns a fallback value of \texttt{is\_correct=True} with \texttt{corrected\_answer=None} and \texttt{confidence=0.5}. This fallback is conservative for downstream safety because an unparseable response preserves the original candidate answer. It is permissive for false-accept-rate measurement on actually wrong items because an unparseable response is counted as an accept.
-
-The revised analysis therefore replays the parser offline on stored \texttt{raw\_response} strings using \texttt{analysis/parser\_artifact\_audit.py}. This replay reconstructs per-arm parse-failure flags without rerunning model inference. We report verdict contrasts both with parse failures included, matching the original parsed-output metric, and with any pair containing a parse failure excluded. The paired exclusion is used only as a parser-aware sensitivity analysis; the included metric remains useful for measuring an end-to-end structured critic interface, where malformed output is itself a failure mode.
+Constrained decoding removes the literal malformed-JSON artifact from the main experiment, but a judge call can still fail to yield an analyzable verdict because the candidate solution exceeds the context window, the completion is truncated, or the serving request errors. We log these cases separately as \texttt{ctx\_overflow}, \texttt{length\_trunc}, \texttt{error}, or \texttt{other}. Context-overflow exclusions are determined before judging and are uniform across all judge-interface cells within a dataset. Verdict metrics are computed on valid verdicts after these exclusions. We report valid-verdict coverage on the analyzable pool so that interface effects can be separated from coverage effects.
 
 \subsection{Metrics}
 \label{sec:metrics}
 
-The primary metric is false-accept rate, defined on actually wrong candidate solutions as the fraction judged correct by the critic. Lower false-accept rate indicates better error detection. The corresponding metric on actually correct solutions is false-rejection rate, the fraction judged wrong by the critic. We also report detection accuracy over both correct and wrong solutions, correction success among rejected wrong solutions, harmful correction among correct solutions that are falsely rejected and then changed, and mean confidence. Calibration is reported as expected calibration error (ECE) using ten equal-width bins on stated confidence in $[0,1]$, computed per (critic, prompt-interface, dataset) and summarized both pooled and as an equal-dataset-weighted macro mean. Items that produced a parse failure at logging time are excluded from confidence-based metrics. As an end-to-end summary, we also report $P(\text{final correct}) = p \cdot (1 - \mathrm{HCR}) + (1-p) \cdot \mathrm{WRCR}$, where $p$ is the fraction of incoming solutions that are already correct, $\mathrm{HCR}$ is the harmful-correction rate on correct items, and $\mathrm{WRCR}$ is the repair-success rate on wrong items.
+The primary metrics are false-accept rate (FAR), false-reject rate (FRR), and balanced accuracy. FAR is the fraction of actually wrong candidate solutions judged correct. FRR is the fraction of actually correct candidate solutions judged wrong. Balanced accuracy is the average of wrong-item rejection rate and correct-item acceptance rate:
+\begin{equation}
+\mathrm{BAcc} = \frac{1}{2}\left[(1-\far) + (1-\mathrm{FRR})\right].
+\end{equation}
+Model comparisons use balanced accuracy because the candidate pool is intentionally enriched for wrong solutions.
 
-Repair metrics are interpreted separately from verdict metrics. A low false-accept rate is not sufficient if the critic rejects many correct solutions or generates poor repairs. Conversely, poor repair quality does not invalidate a verdict-stage finding; it indicates a different bottleneck in the critique-repair pipeline.
+For leaderboard stability, we compute judge rankings within each dataset-interface cell, pairwise balanced-accuracy gaps between judges, and Kendall rank correlations between interface-specific judge rankings. For item-level instability, we compute the fraction of fixed candidates whose verdict changes across interfaces under the same judge.
 
 \subsection{Statistical Analysis}
 \label{sec:stats}
 
-All primary comparisons are item-paired. For primary false-accept differences, we report absolute percentage-point differences with paired bootstrap confidence intervals over problem identifiers. The primary analysis uses paired bootstrap intervals for the pre-specified prompt-interface contrasts. As a model-based robustness check, we fit per-critic generalized estimating equation (GEE) binomial logistic regressions with cluster-robust standard errors by problem identifier and \textsc{Verdict-Only Neutral} as the reference arm. We use GEE rather than a mixed-effects model in the final analysis because it gave stable cluster-robust estimates for every critic and prompt arm.
+All pairwise judge comparisons are item-paired within an interface and dataset. We report absolute balanced-accuracy gaps in percentage points with cluster-bootstrap 95\% confidence intervals, resampling problem identifiers and retaining all candidate rows associated with a resampled problem. This clustering handles the small number of cases where the same problem appears with both a wrong and a correct candidate solution.
 
-The primary prompt-interface diagnostic is \textsc{Verdict+Repair} versus \textsc{Verdict-Only Neutral}, reported both under the original parsed-output metric and under parser-aware exclusion. Secondary prompt contrasts examine the explicit no-repair instruction, the schema-matched control, the field-order arm, leave-one-dataset-out robustness, and cross-critique replication. Identity and source-framing contrasts use \textsc{Anonymous} as the reference condition and are treated as contextual analyses. We report both odds ratios and absolute percentage-point effects where model fits are used, with emphasis on absolute effects because the baseline false-accept rates are high. To control family-wise error on the per-critic Caveat A prompt contrasts (nine tests: three contrasts $\times$ three critics), we additionally report Holm--Bonferroni adjusted $p$-values estimated by paired bootstrap; results are summarized in Table~\ref{tab:holm}. Revision analyses that compare interface variance, parser-aware contrasts, thinking modes, and abstention thresholds are generated by \texttt{analysis/revision\_v4\_analyses.py}.
+For model-based inference, we fit generalized estimating equation (GEE) binomial logistic regressions for verdict correctness. The per-dataset models include judge, interface, and judge-by-interface terms and cluster by problem identifier. We also fit a pooled two-way model with dataset fixed effects and judge-by-interface terms. Finally, to test whether the judge-by-interface interaction changes across task families, we fit a pooled three-way model with judge, interface, dataset, and judge-by-interface-by-dataset terms, clustering by dataset-specific problem identifier. The joint robust Wald test on the 24 three-way interaction terms is the pre-specified test for task-dependent interface confounding. The frozen GEE summary is stored in the paper's tables directory, and the analysis is generated by the interface-confound, item-disagreement, and think-versus-no-think scripts.
+
 
 
 \section{Results}
 \label{sec:results}
 
-\subsection{Over-Acceptance Is the Dominant Baseline Failure}
-\label{sec:results-baseline}
+\subsection{Interface Choices Change Judge Comparisons Within Task Families}
+\label{sec:results-within-task}
 
-Before considering source labels or repair requests, the critics already accept a large fraction of wrong solutions. In the legacy full-call sweeps, false-accept rates are 55.9\% for Gemma-4, 77.1\% for gpt-oss-no-think, and 56.9\% for qwen3-no-think. The neutral verdict-only ablation arms remain high: 46.7\%, 64.0\%, and 57.9\%, respectively. These values show that the main reliability problem is not a small identity gap but a broad failure to reject flawed reasoning.
+The fixed-content interface matrix shows the target interaction directly. The same candidate solutions produce different judge rankings when only the judge-side output contract changes. This is not a single-dataset anomaly. In per-dataset GEE models of verdict correctness, the judge-by-interface block contains significant interaction terms in all four task families: 6 on AIME, 3 on GPQA, 2 on Olympiad, and 1 on MMLU-Pro. These counts are frozen in \texttt{paper/tables/ifc\_gee\_summary.csv}. Figure~\ref{fig:ifc-heatmap} visualizes the per-dataset judge-interface matrix, and Table~\ref{tab:ifc-dataset-summary} summarizes the ranking instability seen in the frozen per-dataset artifacts.
 
-\begin{table}[t]
+\begin{figure*}[t]
 \centering
-\small
-\begin{tabular}{lrrrr}
-\toprule
-Critic & $n_w$ & FAR & $n_c$ & FRR \\
-\midrule
-Gemma-4               & 725  & 55.9 & 737  & 7.5 \\
-\texttt{gpt-oss-no-think} & 4961 & 77.1 & 3811 & 6.8 \\
-\texttt{qwen3-no-think}   & 7115 & 56.9 & 8909 & 13.8 \\
-\bottomrule
-\end{tabular}
-\caption{Baseline false-accept rate (FAR) on wrong solutions and false-rejection rate (FRR) on correct solutions, pooled over datasets and source-framing conditions in the legacy full-call sweep. Rates are percentages.}
-\label{tab:baseline-far}
-\end{table}
+\includegraphics[width=\textwidth]{figures/fig_ifc_heatmap.png}
+\caption{Balanced accuracy by judge, interface, and dataset. Each panel holds judged content fixed and varies only the judge-side output interface. Cell annotations are balanced accuracy percentages; white outlines mark the best judge within each interface column.}
+\label{fig:ifc-heatmap}
+\end{figure*}
 
-\subsection{Interface Variation Exceeds Identity Variation}
-\label{sec:results-interface-identity}
+AIME gives the clearest adjacent-rank reversal. Gemma-4-no-think is the top judge under verdict-only (84.9\% balanced accuracy), rubric-verdict (91.8\%), score-then-verdict (84.9\%), and verdict-plus-repair (88.4\%). Under repair-then-verdict, however, gpt-oss-no-think becomes the top judge at 86.9\%, while Gemma-4-no-think falls to 79.1\%. The paired cluster-bootstrap gap between Gemma-4-no-think and gpt-oss-no-think is +14.5 points under rubric-verdict, with a 95\% CI of [7.0, 22.8], but -8.5 points under repair-then-verdict, with a 95\% CI of [-19.0, 1.4]. The repair-then-verdict rank order has Kendall $\tau=0.333$ against each of the other four AIME interfaces, while the other four interfaces agree with one another at $\tau=1.000$.
 
-The central comparison is between ordinary identity-label variation and prompt-interface variation. Ordinary identity labels are small: across anonymous, human, other-model, and self labels, the four-label FAR range is 2.76 percentage points for Gemma-4, 0.81 points for gpt-oss-no-think, and 1.96 points for qwen3-no-think. The prompt-interface range over the Caveat A arms is larger for every critic with both measurements available: 8.43, 7.78, and 7.41 points, respectively. Thus, the interface range is 3.06--9.65 times the identity-label range (Table~\ref{tab:interface-identity}).
+GPQA shows the opposite direction for the same repair-then-verdict interface. gpt-oss-no-think is highest under verdict-only (64.7\%), rubric-verdict (65.5\%), and score-then-verdict (61.6\%), but Gemma-4-no-think is highest under verdict-plus-repair (64.5\%) and repair-then-verdict (68.7\%). The Gemma-minus-gpt-oss gap is -6.7 points under verdict-only, with a CI of [-17.8, 4.2], but +12.7 points under repair-then-verdict, with a CI of [1.1, 24.1]. Thus the same output-interface axis that favors gpt-oss-no-think on AIME favors Gemma-4-no-think on GPQA.
 
-This is the paper's main positive result. It does not require a universal repair-request mechanism. The same solution content is being measured through different source labels and different output contracts, and the output contract moves the measurement more than ordinary authorship attribution. Low-competence framing still matters as an asymmetric skepticism cue, but it is secondary to the broader prompt-interface brittleness.
-
-\begin{table}[t]
-\centering
-\small
-\begin{tabular}{lrrr}
-\toprule
-Critic & Identity range & Interface range & Ratio \\
-\midrule
-Gemma-4 & 2.76 & 8.43 & 3.06 \\
-gpt-oss-no-think & 0.81 & 7.78 & 9.65 \\
-qwen3-no-think & 1.96 & 7.41 & 3.78 \\
-gpt-oss-think & 0.87 & -- & -- \\
-qwen3 & 1.61 & -- & -- \\
-\bottomrule
-\end{tabular}
-\caption{Interface variation versus ordinary identity-label variation. Identity range is the max-min FAR spread across anonymous, human, other-model, and self labels. Interface range is the max-min FAR spread across available Caveat A prompt-interface arms. Values are percentage points.}
-\label{tab:interface-identity}
-\end{table}
-
-\subsection{Repair-Coupled Prompts Confound Verdicts With Parse Reliability}
-\label{sec:results-parser-aware}
-
-The original two-stage diagnostic is useful as a motivating example of why interface-aware measurement is needed. A verdict-only instructed call and a verdict-plus-repair call on the same candidate solutions suggested large apparent increases in false acceptance: +9.0 percentage points for gpt-oss-no-think and +8.6 points for qwen3-no-think (Table~\ref{tab:phasee}). This diagnostic showed that the critique interface mattered, but it did not identify the mechanism.
+MMLU-Pro and Olympiad are less dramatic in the top position but still show interface-dependent comparisons. On MMLU-Pro, Gemma-4-no-think remains the highest balanced-accuracy judge under all five interfaces, but the ordering of gpt-oss-no-think and qwen3-no-think changes. Under verdict-only, gpt-oss-no-think scores 54.7\% and qwen3-no-think scores 50.1\%; under repair-then-verdict, qwen3-no-think scores 57.6\% while gpt-oss-no-think falls to 51.3\%. On Olympiad, gaps are compressed: Gemma-4-no-think is highest or tied under most interfaces, while rubric-verdict puts gpt-oss-no-think at 67.1\% and Gemma-4-no-think at 63.3\%. The Gemma-minus-gpt-oss rubric gap is -1.2 points with a CI of [-6.8, 3.8], so this top swap is not statistically decisive by itself. It is nevertheless part of the same pattern: interface choice changes the measured comparison, with Olympiad showing the least decisive instability.
 
 \begin{table}[t]
 \centering
 \footnotesize
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{lrrrrr}
+\setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lrrrrl}
 \toprule
-Critic & $n$ & FAR$_{\mathrm{init}}$ & FAR$_{\mathrm{full}}$ & $\Delta$ pp & 95\% CI \\
+Dataset & Initial $n$ & Analyzable $n$ & GEE terms & Min. $\tau$ & Ranking pattern \\
 \midrule
-gpt-oss-no-think & 5100 & 68.3 & 77.3 & +9.0 & [+7.9, +10.2] \\
-qwen3-no-think   & 4444 & 47.4 & 56.0 & +8.6 & [+7.6, +9.5] \\
+AIME & 75 & 66 & 6 & 0.333 & top flips under repair-then \\
+GPQA & 75 & 71 & 3 & 0.333 & top flips across repair interfaces \\
+MMLU-Pro & 75 & 72 & 1 & 0.333 & lower-rank order changes \\
+Olympiad & 75 & 65 & 2 & -0.333 & compressed gaps, least decisive \\
 \bottomrule
 \end{tabular}
-\caption{Motivating pre-ablation diagnostic. The full call asks for verdict and corrected answer; the initial call is the verdict-only instructed prompt. Later parser-aware ablations show that this diagnostic should be read as evidence of interface brittleness, not as a clean repair-request mechanism.}
-\label{tab:phasee}
+}
+\caption{Per-dataset interface instability summary. ``GEE terms'' counts significant judge-by-interface terms in the per-dataset GEE model of verdict correctness, as frozen in \texttt{paper/tables/ifc\_gee\_summary.csv}. Kendall $\tau$ is the minimum rank correlation between any two interface-specific judge rankings within the dataset. The analyzable pool removes only uniform context-overflow exclusions before judge-specific non-verdicts.}
+\label{tab:ifc-dataset-summary}
 \end{table}
-
-Parser-aware replay changes the interpretation of the Caveat A prompt contrasts. The verdict-plus-repair prompt produces more malformed structured outputs than the neutral verdict-only prompt. Because the production fallback maps parse failure to \texttt{is\_correct=True}, parse failures on wrong items become false accepts under the included parsed-output metric. When pairs containing a parse failure are excluded, three kinds of interface effects emerge. Some apparent effects are pure parser artifacts: the Gemma-4 verdict-plus-repair contrast collapses from +4.52 points to -0.34 points. Some weaken: the gpt-oss-no-think verdict-plus-repair contrast moves from +4.61 points to +1.42 points with a confidence interval crossing zero. Others survive as behavioral effects: qwen3-no-think remains lower-FAR under the instructed arm (-5.99 points), the schema-matched arm (-3.37 points), and the verdict-plus-repair arm (-3.80 points) after parse-failure exclusion (Table~\ref{tab:parse-aware-all}).
-
-The correct conclusion is therefore not that verdict-plus-repair robustly increases false acceptance as a behavioral verdict effect. The correct conclusion is that repair-coupled structured prompts are measurement-unsafe unless parse failures are explicitly logged and analyzed. The included metric remains relevant for end-to-end system behavior because malformed output is a real interface failure; the excluded metric is necessary for isolating behavioral verdict changes from parser artifacts. The parser-artifact pattern is also not specific to anonymous source framing: Gemma-4 verdict-plus-repair contrasts collapse after parse-failure exclusion for anonymous (+4.52 to -0.34), other-model (+3.61 to -0.68), and weak-model (+5.42 to 0.00) conditions, and gpt-oss-no-think shows the same pattern across anonymous, self, and weak-model conditions.
 
 \begin{table*}[t]
 \centering
 \footnotesize
 \setlength{\tabcolsep}{4pt}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{llrrrr}
+\begin{tabular}{lllrrrr}
 \toprule
-Critic & Contrast vs neutral & Included $\Delta$ & Included CI & Excluded $\Delta$ & Excluded CI \\
+Dataset & Comparison & Interface & $n$ pairs & Gap & 95\% CI & Excl. 0 \\
 \midrule
-Gemma-4 & Instructed & -1.20 & [-2.71, +0.00] & -0.91 & [-2.42, +0.30] \\
-Gemma-4 & Schema-matched & -0.60 & [-1.51, +0.00] & -0.61 & [-1.52, +0.00] \\
-Gemma-4 & Verdict+repair & +4.52 & [+2.11, +7.23] & -0.34 & [-1.37, +0.69] \\
-Gemma-4 & Answer-first repair & +7.23 & [+4.22, +10.54] & +4.49 & [+1.60, +7.38] \\
-\midrule
-gpt-oss-no-think & Instructed & -3.17 & [-7.49, +1.15] & -3.06 & [-6.80, +0.68] \\
-gpt-oss-no-think & Schema-matched & +0.29 & [-4.03, +4.61] & +0.34 & [-3.73, +4.75] \\
-gpt-oss-no-think & Verdict+repair & +4.61 & [+0.00, +9.22] & +1.42 & [-3.19, +6.03] \\
-gpt-oss-no-think & Answer-first repair & +0.29 & [-3.75, +4.32] & +0.34 & [-3.06, +3.74] \\
-\midrule
-qwen3-no-think & Instructed & -7.01 & [-9.59, -4.43] & -5.99 & [-8.61, -3.37] \\
-qwen3-no-think & Schema-matched & -3.69 & [-6.27, -1.11] & -3.37 & [-5.81, -0.94] \\
-qwen3-no-think & Verdict+repair & -2.95 & [-5.72, +0.00] & -3.80 & [-6.64, -1.14] \\
+AIME & Gemma $-$ gpt-oss & rubric-verdict & 55 & +14.5 & [7.0, 22.8] & yes \\
+AIME & Gemma $-$ gpt-oss & repair-then-verdict & 54 & -8.5 & [-19.0, 1.4] & no \\
+GPQA & Gemma $-$ gpt-oss & verdict-only & 64 & -6.7 & [-17.8, 4.2] & no \\
+GPQA & Gemma $-$ gpt-oss & repair-then-verdict & 65 & +12.7 & [1.1, 24.1] & yes \\
+MMLU-Pro & Gemma $-$ gpt-oss & rubric-verdict & 69 & +13.1 & [4.9, 21.5] & yes \\
+MMLU-Pro & gpt-oss $-$ qwen3 & repair-then-verdict & 71 & -6.5 & [-13.3, 0.0] & no \\
+Olympiad & Gemma $-$ gpt-oss & rubric-verdict & 61 & -1.2 & [-6.8, 3.8] & no \\
+Olympiad & Gemma $-$ qwen3 & verdict-only & 63 & +9.7 & [1.0, 17.9] & yes \\
 \bottomrule
 \end{tabular}
-}
-\caption{Parser-aware Caveat A contrasts on anonymous wrong items. Included contrasts use the production parsed-output metric, where parse failure falls back to acceptance. Excluded contrasts remove pairs containing a parse failure. Deltas and intervals are percentage points.}
-\label{tab:parse-aware-all}
+\caption{Representative cluster-bootstrap balanced-accuracy gaps. Positive gaps mean the first judge has higher balanced accuracy than the second judge under that dataset-interface cell. All gaps are percentage points.}
+\label{tab:ifc-gaps}
 \end{table*}
 
-Fallback policy is itself an interface choice. If malformed responses are mapped to acceptance, Gemma-4's verdict-plus-repair contrast is +4.52 points. If the same malformed responses are mapped to rejection, the contrast becomes -7.53 points. If parse-failure pairs are dropped, the contrast is -0.34 points. Thus the sign of the headline Gemma-4 repair contrast is determined by the parser policy rather than by a stable behavioral verdict shift. gpt-oss-no-think likewise loses its apparent positive contrast under non-accept policies, while qwen3-no-think remains negative across policies (Table~\ref{tab:policy-sensitivity}).
+\subsection{The Interaction Is Task-Dependent, So Pooling Can Erase It}
+\label{sec:results-task-dependent}
 
-\begin{table}[t]
-\centering
-\footnotesize
-\setlength{\tabcolsep}{3pt}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{llrr}
-\toprule
-Critic & Policy & $\Delta$ pp & 95\% CI \\
-\midrule
-Gemma-4 & Accept parse fail & +4.52 & [+2.11, +7.23] \\
-Gemma-4 & Reject parse fail & -7.53 & [-10.54, -4.52] \\
-Gemma-4 & Drop parse fail & -0.34 & [-1.37, +0.69] \\
-\midrule
-gpt-oss-no-think & Accept parse fail & +4.61 & [+0.00, +9.22] \\
-gpt-oss-no-think & Reject parse fail & +1.15 & [-2.89, +5.19] \\
-gpt-oss-no-think & Drop parse fail & +1.42 & [-3.19, +6.03] \\
-\midrule
-qwen3-no-think & Accept parse fail & -2.95 & [-5.72, +0.00] \\
-qwen3-no-think & Reject parse fail & -4.61 & [-7.38, -1.85] \\
-qwen3-no-think & Drop parse fail & -3.82 & [-6.50, -1.15] \\
-\bottomrule
-\end{tabular}
-}
-\caption{Fallback-policy sensitivity for Verdict+Repair minus Verdict-Only Neutral on anonymous wrong items. The Gemma-4 sign reversal shows that parser fallback is part of the measured interface, not a neutral implementation detail.}
-\label{tab:policy-sensitivity}
-\end{table}
-
-\subsection{Instruction and Schema Perturbations Still Shift Verdicts}
-\label{sec:results-caveat-a}
-
-The parser finding does not mean that all interface effects disappear. The explicit no-repair instruction and schema-matched controls still move verdict behavior, especially for qwen3-no-think. In the Caveat A ablation, the explicit no-repair instruction lowers FAR by 11.0 points relative to the neutral verdict-only prompt for qwen3-no-think, by 3.2 points for gpt-oss-no-think, and by 1.2 points for Gemma-4. The qwen3-no-think schema-matched arm also lowers FAR by 5.9 points relative to neutral. Under parser-aware exclusion on anonymous wrong items, the qwen3-no-think instructed and schema-matched contrasts remain negative and significant at -5.99 and -3.37 points, respectively. In the GEE robustness model, qwen3-no-think has strongly negative coefficients for both the instructed arm (coefficient -0.484, $p<0.001$) and schema-matched arm (coefficient -0.239, $p<0.001$). These effects are not explained by the Gemma-4 repair-parser artifact.
-
-\begin{table}[t]
-\centering
-\footnotesize
-\setlength{\tabcolsep}{3pt}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{lrrrr}
-\toprule
-Critic & Instr. & Neutral & Schema & Repair \\
-\midrule
-Gemma-4 & 45.5 & 46.7 & 46.2 & 51.2 \\
-gpt-oss-no-think & 60.8 & 64.0 & 64.3 & 68.6 \\
-qwen3-no-think & 46.9 & 57.9 & 52.0 & 58.4 \\
-\bottomrule
-\end{tabular}
-}
-\caption{Caveat A prompt-interface ablation under the original included parsed-output metric. FAR columns are percentages on actually wrong solutions. Parser-aware prompt contrasts are reported separately in Table~\ref{tab:parse-aware-all}.}
-\label{tab:caveat-a}
-\end{table}
-
-\begin{table}[t]
-\centering
-\small
-\begin{tabular}{lrr}
-\toprule
-Contrast & $p_{\mathrm{raw}}$ & $p_{\mathrm{Holm}}$ \\
-\midrule
-qwen3-no-think Instructed--Neutral   & 0.0002 & 0.0018 \\
-Gemma-4 Repair--Neutral              & 0.0004 & 0.0032 \\
-qwen3-no-think Schema--Neutral       & 0.0048 & 0.0336 \\
-qwen3-no-think Repair--Neutral       & 0.0544 & 0.3264 \\
-gpt-oss-no-think Repair--Neutral     & 0.0636 & 0.3264 \\
-Gemma-4 Instructed--Neutral          & 0.1240 & 0.4960 \\
-gpt-oss-no-think Instructed--Neutral & 0.1820 & 0.5460 \\
-Gemma-4 Schema--Neutral              & 0.2688 & 0.5460 \\
-gpt-oss-no-think Schema--Neutral     & 0.9540 & 0.9540 \\
-\bottomrule
-\end{tabular}
-\caption{Holm--Bonferroni adjustment of the nine per-critic Caveat A prompt contrasts under the included parsed-output metric. Parser-aware replay changes the interpretation of the Gemma-4 repair row, but the qwen3-no-think instruction and schema rows remain evidence of interface-sensitive verdict behavior.}
-\label{tab:holm}
-\end{table}
-
-\subsection{Schema-Order Sensitivity Is Critic-Dependent}
-\label{sec:results-field-order}
-
-The field-order ablation asks whether schema layout itself is an interface perturbation. In the standard \textsc{Verdict+Repair} arm, the model emits \texttt{is\_correct} before generating \texttt{corrected\_answer}. In the reversed arm, the prompt asks for \texttt{corrected\_answer} before \texttt{is\_correct}. This manipulation changes the structured response channel and the measured verdict, but not in a universal direction.
-
-For gpt-oss-no-think, the answer-first arm returns the included parsed-output contrast close to the neutral/schema-matched baseline and remains null after parse-failure exclusion. For Gemma-4, the answer-first arm increases the included FAR even more than the standard repair arm, and the effect survives parser-aware exclusion: +7.23 points under the included metric and +4.49 points after excluding parse-failure pairs. Given that the standard Gemma-4 verdict-plus-repair contrast collapses under the same exclusion, the answer-first result is not merely the same parser artifact. It is evidence that field order is itself part of the measurement interface and can interact with model behavior and structured-output reliability differently across critics.
+The direction of the interface effect is task-dependent. Repair-then-verdict favors gpt-oss-no-think over Gemma-4-no-think on AIME, but favors Gemma-4-no-think over gpt-oss-no-think on GPQA and MMLU-Pro. On AIME, the Gemma-minus-gpt-oss repair-then-verdict gap is -8.5 points. On GPQA, the same comparison under the same interface is +12.7 points and excludes zero. On MMLU-Pro, it is +15.2 points with a CI of [8.7, 22.2]. Olympiad is near null for the same comparison at +2.1 points with a CI of [-3.5, 7.8]. Figure~\ref{fig:ifc-gap-slopes} shows the corresponding pairwise gap curves with cluster-bootstrap confidence intervals.
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=\linewidth]{figures/fig6_field_order_mechanism.png}
-\caption{Field-order ablation for gpt-oss-no-think and Gemma-4 under the included parsed-output metric. Answer-first repair returns gpt-oss-no-think to the neutral/schema-matched baseline but further increases Gemma-4 false acceptance, showing critic-dependent schema-order sensitivity rather than a universal generation-order mechanism. Parser-aware contrasts are reported in Table~\ref{tab:parse-aware-all}.}
-\label{fig:field-order}
+\includegraphics[width=\textwidth]{figures/fig_ifc_gap_slopes.png}
+\caption{Pairwise balanced-accuracy gaps by interface and dataset. Positive values mean the first judge in the legend has higher balanced accuracy than the second; the dashed zero line marks equal measured performance. The same interface can move an adjacent comparison across or toward zero in different task families.}
+\label{fig:ifc-gap-slopes}
 \end{figure*}
 
-\begin{table}[t]
-\centering
-\small
-\resizebox{\linewidth}{!}{%
-\begin{tabular}{llrr}
-\toprule
-Critic & Contrast & Incl. $\Delta$ & Excl. $\Delta$ \\
-\midrule
-gpt-oss-no-think & Repair verdict-first--Neutral & +4.6 & +1.4 \\
-gpt-oss-no-think & Repair answer-first--Neutral & +0.3 & +0.3 \\
-Gemma-4 & Repair verdict-first--Neutral & +4.5 & -0.3 \\
-Gemma-4 & Repair answer-first--Neutral & +7.2 & +4.5 \\
-\bottomrule
-\end{tabular}
-}
-\caption{Field-order contrasts on the Caveat A sample. Included uses the production parsed-output metric; excluded removes parse-failure pairs. The answer-first arm asks for \texttt{corrected\_answer} before \texttt{is\_correct}. Values are percentage points relative to \textsc{Verdict-Only Neutral}.}
-\label{tab:field-order}
-\end{table}
+This explains why a pooled two-way model can miss the confound. The pooled GEE with judge, interface, dataset, and judge-by-interface terms yields zero significant judge-by-interface terms at $p<0.05$. That null result does not mean the interface is harmless. The frozen three-way GEE testing judge-by-interface-by-dataset heterogeneity gives a joint robust Wald statistic of $\chi^2=57.9$ on 24 terms, with $p=0.000125$. The proper estimand is therefore not a single averaged judge-by-interface effect. The confound is a three-way relationship among judge, interface, and task family. Averaging across task families cancels effects that are real within task families and directionally different across them.
 
-\subsection{Thinking-Enabled Critics Do Not Solve Verdict Brittleness}
-\label{sec:results-thinking}
+The leaderboard implication is direct. A report that compares two judges under one interface and one task family can misstate both the magnitude and the direction of their measured gap. A report that pools across task families can also be misleading if it presents the null pooled interaction as stability. For LLM-as-judge leaderboards, the output interface is part of the measurement protocol, not an implementation detail.
 
-Thinking-enabled critics partially address repair quality but not verdict strictness. In the legacy full-call data, qwen3 with thinking enabled has a FAR of 68.82\%, compared with 55.56\% for qwen3-no-think. gpt-oss-think has a FAR of 80.53\%, compared with 76.61\% for gpt-oss-no-think. In both model families, the thinking-enabled critic is more accepting of wrong solutions. At the same time, repair quality improves: macro repair success rises from 10.4\% to 18.9\% for Qwen3 and from 18.2\% to 39.1\% for gpt-oss. Thinking therefore improves some downstream correction behavior without solving the verdict measurement problem.
+\subsection{Verdict Flips Occur at the Item Level}
+\label{sec:results-item-level}
+
+The aggregate rank changes are not driven only by small denominator effects or isolated cells. Holding judge and candidate content fixed, a mean of 18.4\% of analyzable candidates receive different verdicts across the five interfaces. The instability is concentrated on actually wrong candidates, exactly where false acceptance matters most. Across judge-dataset cells, wrong-item disagreement ranges from 14.3\% to 45.2\%, while correct-item disagreement ranges from 0.0\% to 12.0\%.
+
+AIME is the most unstable dataset by this item-level metric. qwen3-no-think changes verdict on 32.8\% of AIME candidates, including 45.2\% of wrong candidates. Gemma-4-no-think and gpt-oss-no-think change verdict on 21.5\% and 22.7\% of AIME candidates, respectively. GPQA is lower but still nontrivial, with total disagreement rates of 18.3\%, 18.3\%, and 16.9\% for Gemma-4-no-think, gpt-oss-no-think, and qwen3-no-think. MMLU-Pro ranges from 11.1\% to 18.1\%, and Olympiad ranges from 9.2\% to 23.1\%. These are fixed candidates under fixed judges; the verdict changes because the output interface changes.
 
 \begin{table}[t]
 \centering
-\small
+\footnotesize
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{lrrr}
 \toprule
-Critic & FAR & Repair success & Thinking \\
+Dataset & Total disagree & Wrong disagree & Correct disagree \\
 \midrule
-qwen3 & 68.82 & 18.9 & on \\
-qwen3-no-think & 55.56 & 10.4 & off \\
-gpt-oss-think & 80.53 & 39.1 & on \\
-gpt-oss-no-think & 76.61 & 18.2 & off \\
+AIME & 21.5--32.8 & 29.5--45.2 & 4.5--9.1 \\
+GPQA & 16.9--18.3 & 21.7--23.9 & 8.0--12.0 \\
+MMLU-Pro & 11.1--18.1 & 17.0--23.4 & 0.0--12.0 \\
+Olympiad & 9.2--23.1 & 14.3--31.0 & 0.0--8.7 \\
 \bottomrule
 \end{tabular}
-\caption{Thinking versus no-thinking legacy full-call comparison. FAR is measured on wrong items; repair success is equal-dataset-weighted macro repair success among rejected wrong items. Rates are percentages.}
-\label{tab:thinking}
+\caption{Item-level verdict disagreement across interfaces. Each cell is the range across the three no-think judges. Values are percentages of fixed candidates whose verdict changes under at least one interface.}
+\label{tab:item-disagreement}
 \end{table}
 
-\subsection{Mitigation Requires Separating Measurement From Intervention}
-\label{sec:results-mitigation}
+\subsection{Coverage Accounting Separates Interface Effects From Non-Verdicts}
+\label{sec:results-coverage}
 
-The most robust mitigation is not a new repair prompt but a measurement protocol: log a neutral verdict and parse status before requesting repair. The gated pipeline implements this protocol by first collecting a neutral verdict-only assessment and requesting repair only after rejection. Under the included parsed-output metric, gating lowers one-shot FAR for Gemma-4 and gpt-oss-no-think and is small for qwen3-no-think, consistent with the broader interface-sensitivity pattern. N-of-K majority voting requires five calls and does not dominate the one-call gated verdict stage. Confidence-based abstention is also not a clean fix: for qwen3-no-think under the neutral verdict-only arm, increasing the confidence threshold from 0.5 to 0.95 lowers coverage from 74.7\% to 52.1\%, but FAR among retained predictions rises from 68.7\% to 95.1\%. High-confidence retained judgments can therefore concentrate false accepts rather than remove them.
+The main experiment uses constrained JSON decoding, so the parser-fallback artifact from the earlier repair-coupling diagnostic is not the headline mechanism here. The remaining coverage issue is non-verdict accounting. Uniform context-overflow exclusions are content-driven and identical across all judge-interface cells within each dataset: 9 AIME, 4 GPQA, 3 MMLU-Pro, and 10 Olympiad problem identifiers. These exclusions occur before judging because the candidate solution alone exceeds the shared 32k context window.
+
+On the analyzable pool, most judge-interface cells have high valid-verdict rates, but the frozen audit table still contains qwen3-no-think truncation exceptions on verbose interfaces. The minimum valid-verdict rates are 81.8\% on AIME, 84.5\% on GPQA, 76.4\% on MMLU-Pro, and 78.5\% on Olympiad, all occurring in qwen3-no-think verbose-interface cells. The maximum valid-verdict rate is 100.0\% in every dataset. Because these exceptions are judge-interface correlated, we report coverage alongside verdict metrics rather than treating it as invisible missingness.
 
 \begin{table}[t]
 \centering
 \footnotesize
-\setlength{\tabcolsep}{3pt}
+\setlength{\tabcolsep}{4pt}
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{lrrrr}
+\begin{tabular}{lrrrrl}
 \toprule
-Pipeline or filter & Calls/item & Coverage & FAR & Note \\
+Dataset & Initial $n$ & Overflow & Analyzable & Valid range & Cells below 95\% \\
 \midrule
-One-shot verdict+repair & 1.00 & 100.0 & -- & fused verdict/repair \\
-Gated verdict then repair & 1.21 & 100.0 & -- & neutral verdict first \\
-N-of-K=5 majority & 5.00 & 100.0 & -- & higher call cost \\
-qwen3 neutral, $\tau=0.50$ & 1.00 & 74.7 & 68.7 & confidence filter \\
-qwen3 neutral, $\tau=0.95$ & 1.00 & 52.1 & 95.1 & retained FAR rises \\
+AIME & 75 & 9 & 66 & 81.8--100.0 & qwen3 repair/rubric \\
+GPQA & 75 & 4 & 71 & 84.5--100.0 & qwen3 rubric \\
+MMLU-Pro & 75 & 3 & 72 & 76.4--100.0 & qwen3 rubric \\
+Olympiad & 75 & 10 & 65 & 78.5--100.0 & qwen3 rubric \\
 \bottomrule
 \end{tabular}
 }
-\caption{Mitigation and abstention comparison. Gated cost uses the observed verdict-rejection rate on wrong items. Abstention rows show qwen3-no-think \textsc{Verdict-Only Neutral}; coverage and FAR are percentages among items whose reported confidence is at least $\tau$.}
-\label{tab:mitigation-abstain}
+\caption{Coverage audit from constrained-decoding runs. Overflow exclusions are uniform content-driven exclusions. Valid range is the minimum and maximum valid-verdict rate on the analyzable pool across judge-interface cells.}
+\label{tab:coverage}
 \end{table}
 
-\begin{table*}[t]
-\centering
-\small
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{llrrrrrr}
-\toprule
-Critic & Cond. & $n_w$ & One-shot FAR & Gated FAR & $\Delta$ pp & True accept (gated/one-shot) & Harmful (gated/one-shot) \\
-\midrule
-Gemma-4 & anon. & 332 & 51.2 & 46.7 & -4.5 & 92.5 / 93.5 & 3.5 / 3.5 \\
-Gemma-4 & other & 332 & 50.0 & 46.4 & -3.6 & 91.0 / 93.0 & 3.5 / 3.5 \\
-\texttt{gpt-oss-no-think} & anon. & 347 & 68.6 & 64.0 & -4.6 & 90.2 / 91.2 & 7.3 / 6.7 \\
-\texttt{gpt-oss-no-think} & self & 347 & 68.3 & 64.8 & -3.5 & 90.2 / 90.2 & 6.2 / 7.3 \\
-\texttt{qwen3-no-think} & anon. & 356 & 58.4 & 57.9 & -0.6 & 88.3 / 87.7 & 7.0 / 10.5 \\
-\texttt{qwen3-no-think} & self & 356 & 59.3 & 57.9 & -1.4 & 88.3 / 87.7 & 7.0 / 9.9 \\
-\bottomrule
-\end{tabular}
-}
-\caption{Gated verdict-then-repair pipeline compared with one-shot verdict-plus-repair under the included parsed-output metric. The table is retained as an end-to-end interface comparison; it is not interpreted as proof that repair coupling has a parser-independent behavioral effect.}
-\label{tab:gated}
-\end{table*}
+\subsection{Deliberation-in-Schema Stabilizes the Comparison}
+\label{sec:results-deliberation}
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\linewidth]{figures/fig7_n_of_k_vs_gated.png}
-\caption{Mitigation comparison among one-shot verdict-plus-repair, gated verdict-then-repair, and five-sample majority voting. N-of-K is approximately tied with gated for Gemma-4 and gpt-oss-no-think and worse for qwen3-no-think while requiring five critic calls.}
-\label{fig:nofk-gated}
-\end{figure*}
+The secondary robustness experiment asks whether adding an explicit deliberation slot to the constrained output contract stabilizes judge comparisons. This is not a native chain-of-thought comparison. The intervention is itself an interface change: a required free-text \texttt{reasoning} field is placed before the verdict fields, and the judge is instructed to reason before giving the verdict. The matched subset uses AIME and GPQA, the same three judges, and three interfaces: verdict-only, rubric-verdict, and repair-then-verdict.
 
-\subsection{Repair Quality and End-to-End Utility Remain Poor}
-\label{sec:results-repair-quality}
-
-Separating verdict from repair is necessary because repair quality is weak even when the critic correctly detects an error. Among wrong solutions that are correctly rejected, repair success is only 10--22\% for the main no-thinking and Gemma critics. Thinking improves repair quality, but even the better gpt-oss-think legacy configuration leaves most detected errors unrepaired. The other side of the tradeoff is harmful correction: when a critic falsely rejects a correct solution, it often replaces the correct answer with a wrong one.
-
-End-to-end utility makes the same point. At an incoming correctness rate of $p=0.5$, the pipeline is slightly positive for Gemma-4 but negative for gpt-oss-no-think and qwen3-no-think. Repair is therefore not a guaranteed benefit that can compensate for brittle verdict measurement. For critics whose downstream repair quality is poor, the more reliable use of the verdict is triage, with repair delegated to a different model or a human.
-
-\begin{table}[t]
-\centering
-\small
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{llrrrr}
-\toprule
-Critic & Cond. & Pipe. & WRCR & HCR & Net pp \\
-\midrule
-Gemma-4                   & anon  & oneshot & 9.0  & 3.5  & +2.8 \\
-Gemma-4                   & anon  & gated   & 9.6  & 3.5  & +3.1 \\
-Gemma-4                   & other & oneshot & 7.5  & 3.5  & +2.0 \\
-Gemma-4                   & other & gated   & 9.6  & 3.5  & +3.1 \\
-\texttt{gpt-oss-no-think} & anon  & oneshot & 2.6  & 6.7  & $-2.1$ \\
-\texttt{gpt-oss-no-think} & anon  & gated   & 3.2  & 7.3  & $-2.0$ \\
-\texttt{gpt-oss-no-think} & self  & oneshot & 3.7  & 7.3  & $-1.8$ \\
-\texttt{gpt-oss-no-think} & self  & gated   & 2.9  & 6.2  & $-1.7$ \\
-\texttt{qwen3-no-think}   & anon  & oneshot & 3.4  & 10.5 & $-3.6$ \\
-\texttt{qwen3-no-think}   & anon  & gated   & 2.5  & 7.0  & $-2.2$ \\
-\texttt{qwen3-no-think}   & self  & oneshot & 2.2  & 9.9  & $-3.8$ \\
-\texttt{qwen3-no-think}   & self  & gated   & 2.5  & 7.0  & $-2.2$ \\
-\bottomrule
-\end{tabular}
-}
-\caption{End-to-end pipeline utility at $p = 0.5$ (half of incoming solutions correct). WRCR is repair-success rate among rejected wrong items; HCR is harmful-correction rate among falsely rejected correct items; Net pp is $100 \cdot [P(\text{final correct}) - p]$.}
-\label{tab:utility}
-\end{table}
+On this subset, deliberation-in-schema shrinks the mean interface range from 9.0 points to 3.3 points (Figure~\ref{fig:ifc-think}). Without the reasoning field, every judge-dataset cell has two distinct interface-specific rankings across the three interfaces. With the reasoning field, every judge-dataset cell has one distinct ranking, so the rank flips in the matched no-think subset disappear. Balanced accuracy also generally rises in the frozen per-interface deliberation table. For Gemma-4-no-think on AIME, the no-deliberation range of 79.1--91.8\% becomes 96.3--97.5\% with deliberation. On GPQA, Gemma-4-no-think moves from 58.0--68.7\% to 66.5--70.1\%, gpt-oss-no-think moves from 56.4--65.5\% to 61.6--65.6\%, and qwen3-no-think moves from 52.2--55.6\% to 53.3--58.7\%. The mean reasoning field length is 1443 characters on AIME and 1174 characters on GPQA. Valid-verdict coverage is similar across conditions in the summary table: 94.9--97.7\% without deliberation and 95.1--98.4\% with deliberation.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\linewidth]{figures/fig9_repair_success_per_arm.png}
-\caption{Repair success among wrong solutions that the critic correctly rejected. Success remains low across critics; thinking-enabled critics improve repair quality but do not solve verdict over-acceptance.}
-\label{fig:repair-quality}
+\includegraphics[width=\columnwidth]{figures/fig_ifc_think.png}
+\caption{Deliberation-in-schema robustness ablation. Bars show the max-min balanced-accuracy range across the three matched interfaces for each judge on AIME and GPQA. Adding a required leading reasoning field reduces interface range and collapses the observed interface-specific ranking variants from two to one in each matched dataset.}
+\label{fig:ifc-think}
 \end{figure}
-
-\subsection{Prompt Interface Shifts Calibration}
-\label{sec:results-calibration}
-
-A natural fallback is to ask whether the confidence field identifies unreliable verdicts. It does not solve the interface problem, because calibration itself shifts with the prompt interface. Absolute LLM overconfidence is already well documented, so the calibration result here is not that critics are overconfident in general. The interface-specific result is that calibration changes when the verdict interface changes. Gemma-4's ECE moves from 0.258 in the legacy full-call prompt to 0.314 in the verdict-only neutral prompt and 0.290 in the verdict-plus-repair prompt. gpt-oss-no-think is consistently poorly calibrated, moving from 0.389 to 0.395 and 0.404. The largest shift is qwen3-no-think: ECE worsens from 0.275 in the legacy setting to 0.463 under the verdict-only neutral interface and remains high at 0.416 under verdict-plus-repair. Equal-dataset macro ECE shows the same pattern, moving from 0.263 to 0.460 and 0.419, so the shift is not a pooled-data weighting artifact.
 
 \begin{table}[t]
 \centering
-\small
-\resizebox{\linewidth}{!}{%
-\begin{tabular}{lrrrr}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{llrrrr}
 \toprule
-Critic & Legacy & Neutral & Repair & Neutral--legacy \\
+Condition & Dataset & Mean range & Rankings & Valid rate & Reason chars \\
 \midrule
-Gemma-4 & 0.258 & 0.314 & 0.290 & +0.056 \\
-\texttt{gpt-oss-no-think} & 0.389 & 0.395 & 0.404 & +0.006 \\
-\texttt{qwen3-no-think} & 0.275 & 0.463 & 0.416 & +0.188 \\
+No deliberation & AIME & 10.3 & 2 & 94.9 & 0 \\
+No deliberation & GPQA & 7.7 & 2 & 97.7 & 0 \\
+Deliberation & AIME & 2.3 & 1 & 95.1 & 1443 \\
+Deliberation & GPQA & 4.4 & 1 & 98.4 & 1174 \\
 \bottomrule
 \end{tabular}
 }
-\caption{Interface-dependent calibration shift. Values are 10-bin expected calibration error; lower is better. Broad calibration diagnostics are reported in Appendix~\ref{tab:calibration}.}
-\label{tab:calibration-shift}
+\caption{Deliberation-in-schema robustness summary. Mean range is the mean across judges of the max-min balanced-accuracy spread across the three matched interfaces. Rankings is the number of distinct interface-specific judge rankings observed in the dataset condition.}
+\label{tab:deliberation}
 \end{table}
+
+The practical reading is narrow. Adding a leading deliberation field appears to stabilize the measured comparison in this matched subset, but it should not be described as proof that model reasoning ability solves judge brittleness. It is a controlled output-interface intervention, and its success reinforces the main thesis: the judge interface changes the measurement.
+
 
 \section{Discussion}
 \label{sec:discussion}
@@ -813,7 +626,7 @@ Gemma-4 & Olympiad & 232 & +3.0 & +0.4 & +6.0 \\
 \bottomrule
 \end{tabular}
 }
-\caption{Leave-one-dataset-out Caveat A repair-request contrasts under the included parsed-output metric. These rows are retained as a deployed-interface diagnostic; parser-aware replay in Table~\ref{tab:parse-aware-all} and Table~\ref{tab:appendix-caveat-dataset} supersedes them for behavioral verdict interpretation.}
+\caption{Leave-one-dataset-out Caveat A repair-request contrasts under the included parsed-output metric. These rows are retained as legacy deployed-interface diagnostics; the constrained-decoding interface-confound analysis in Section~\ref{sec:results} supersedes them for the paper's main behavioral interpretation.}
 \label{tab:loo-caveat-a}
 \end{table*}
 
