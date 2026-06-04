@@ -36,7 +36,7 @@
   First~Author,~\IEEEmembership{Member,~IEEE,}
   and~Second~Author,~\IEEEmembership{Member,~IEEE}%
   \thanks{The authors are with the Affiliation.
-          E-mail: \texttt{email@domain}.}
+          E-mail: email@domain.}
 }
 
 \markboth{IEEE Access, Vol.~XX, No.~Y, Month~2026}%
@@ -138,9 +138,9 @@ For each dataset, we sample 75 cached candidate solutions using seed 42: 50 actu
 
 The no-deliberation matrix uses three local judge configurations: Gemma-4-no-think, gpt-oss-no-think, and qwen3-no-think. Each judge evaluates every dataset under every output interface, yielding 4500 attempted judgments before uniform context exclusions and transient non-verdicts: three judges, four datasets, five interfaces, and 75 candidate solutions per dataset.
 
-All judges are served through the repository's local model presets. qwen3-no-think uses \texttt{Qwen/Qwen3-32B} with \texttt{enable\_thinking=False}; gpt-oss-no-think uses \texttt{openai/gpt-oss-20b} with \texttt{reasoning\_effort=low}; Gemma-4-no-think uses the Gemma-4 local serving configuration. The interface-confound runs use constrained JSON decoding through \texttt{response\_format=json\_schema} with strict schemas and a judge completion budget of \texttt{max\_tokens=16000}. The default endpoint is \texttt{http://localhost:8000/v1}.
+All judges are served through the repository's local model presets. qwen3-no-think uses Qwen/Qwen3-32B with enable\_thinking=False; gpt-oss-no-think uses openai/gpt-oss-20b with reasoning\_effort=low; Gemma-4-no-think uses the Gemma-4 local serving configuration. The interface-confound runs use constrained JSON decoding through response\_format=json\_schema with strict schemas and a judge completion budget of max\_tokens=16000. The default endpoint is http://localhost:8000/v1.
 
-The secondary deliberation-in-schema run uses the same three judge families on AIME and GPQA. It does not rely on native private chain-of-thought modes. Instead, the constrained schema adds a required leading free-text \texttt{reasoning} field before the verdict fields, paired with an instruction to think step by step before emitting the verdict. This makes deliberation an explicit output-interface intervention.
+The secondary deliberation-in-schema run uses the same three judge families on AIME and GPQA. It does not rely on native private chain-of-thought modes. Instead, the constrained schema adds a required leading free-text reasoning field before the verdict fields, paired with an instruction to think step by step before emitting the verdict. This makes deliberation an explicit output-interface intervention.
 
 \subsection{Prompt-Interface Variants}
 \label{sec:prompt-variants}
@@ -155,7 +155,7 @@ Each judgment record stores the dataset, problem identifier, candidate identifie
 \subsection{Coverage and Non-Verdict Handling}
 \label{sec:parse-handling}
 
-Constrained decoding removes the literal malformed-JSON artifact from the main experiment, but a judge call can still fail to yield an analyzable verdict because the candidate solution exceeds the context window, the completion is truncated, or the serving request errors. We log these cases separately as \texttt{ctx\_overflow}, \texttt{length\_trunc}, \texttt{error}, or \texttt{other}. Context-overflow exclusions are determined before judging and are uniform across all judge-interface cells within a dataset. Verdict metrics are computed on valid verdicts after these exclusions. We report valid-verdict coverage on the analyzable pool so that interface effects can be separated from coverage effects.
+Constrained decoding removes the literal malformed-JSON artifact from the main experiment, but a judge call can still fail to yield an analyzable verdict because the candidate solution exceeds the context window, the completion is truncated, or the serving request errors. We log these cases separately as ctx\_overflow, length\_trunc, error, or other. Context-overflow exclusions are determined before judging and are uniform across all judge-interface cells within a dataset. Verdict metrics are computed on valid verdicts after these exclusions. We report valid-verdict coverage on the analyzable pool so that interface effects can be separated from coverage effects.
 
 \subsection{Metrics}
 \label{sec:metrics}
@@ -183,7 +183,7 @@ For model-based inference, we fit generalized estimating equation (GEE) binomial
 \subsection{Interface Choices Change Judge Comparisons Within Task Families}
 \label{sec:results-within-task}
 
-The fixed-content interface matrix shows the target interaction directly. The same candidate solutions produce different judge rankings when only the judge-side output contract changes. This is not a single-dataset anomaly. In per-dataset GEE models of verdict correctness, the judge-by-interface block contains significant interaction terms in all four task families: 6 on AIME, 3 on GPQA, 2 on Olympiad, and 1 on MMLU-Pro. These counts are frozen in \texttt{paper/tables/ifc\_gee\_summary.csv}. Figure~\ref{fig:ifc-heatmap} visualizes the per-dataset judge-interface matrix, and Table~\ref{tab:ifc-dataset-summary} summarizes the ranking instability seen in the frozen per-dataset artifacts.
+The fixed-content interface matrix shows the target interaction directly. The same candidate solutions produce different judge rankings when only the judge-side output contract changes. This is not a single-dataset anomaly. In per-dataset GEE models of verdict correctness, the judge-by-interface block contains significant interaction terms in all four task families: 6 on AIME, 3 on GPQA, 2 on Olympiad, and 1 on MMLU-Pro. These counts are frozen in paper/tables/ifc\_gee\_summary.csv. Figure~\ref{fig:ifc-heatmap} visualizes the per-dataset judge-interface matrix, and Table~\ref{tab:ifc-dataset-summary} summarizes the ranking instability seen in the frozen per-dataset artifacts.
 
 \begin{figure*}[t]
 \centering
@@ -214,7 +214,7 @@ Olympiad & 75 & 65 & 2 & -0.333 & compressed gaps, least decisive \\
 \bottomrule
 \end{tabular}
 }
-\caption{Per-dataset interface instability summary. ``GEE terms'' counts significant judge-by-interface terms in the per-dataset GEE model of verdict correctness, as frozen in \texttt{paper/tables/ifc\_gee\_summary.csv}. Kendall $\tau$ is the minimum rank correlation between any two interface-specific judge rankings within the dataset. The analyzable pool removes only uniform context-overflow exclusions before judge-specific non-verdicts.}
+\caption{Per-dataset interface instability summary. ``GEE terms'' counts significant judge-by-interface terms in the per-dataset GEE model of verdict correctness, as frozen in paper/tables/ifc\_gee\_summary.csv. Kendall $\tau$ is the minimum rank correlation between any two interface-specific judge rankings within the dataset. The analyzable pool removes only uniform context-overflow exclusions before judge-specific non-verdicts.}
 \label{tab:ifc-dataset-summary}
 \end{table}
 
@@ -311,7 +311,7 @@ Olympiad & 75 & 10 & 65 & 78.5--100.0 & qwen3 rubric \\
 \subsection{Deliberation-in-Schema Stabilizes the Comparison}
 \label{sec:results-deliberation}
 
-The secondary robustness experiment asks whether adding an explicit deliberation slot to the constrained output contract stabilizes judge comparisons. This is not a native chain-of-thought comparison. The intervention is itself an interface change: a required free-text \texttt{reasoning} field is placed before the verdict fields, and the judge is instructed to reason before giving the verdict. The matched subset uses AIME and GPQA, the same three judges, and three interfaces: verdict-only, rubric-verdict, and repair-then-verdict.
+The secondary robustness experiment asks whether adding an explicit deliberation slot to the constrained output contract stabilizes judge comparisons. This is not a native chain-of-thought comparison. The intervention is itself an interface change: a required free-text reasoning field is placed before the verdict fields, and the judge is instructed to reason before giving the verdict. The matched subset uses AIME and GPQA, the same three judges, and three interfaces: verdict-only, rubric-verdict, and repair-then-verdict.
 
 On this subset, deliberation-in-schema shrinks the mean interface range from 9.0 points to 3.3 points (Figure~\ref{fig:ifc-think}). Without the reasoning field, every judge-dataset cell has two distinct interface-specific rankings across the three interfaces. With the reasoning field, every judge-dataset cell has one distinct ranking, so the rank flips in the matched no-think subset disappear. Balanced accuracy also generally rises in the frozen per-interface deliberation table. For Gemma-4-no-think on AIME, the no-deliberation range of 79.1--91.8\% becomes 96.3--97.5\% with deliberation. On GPQA, Gemma-4-no-think moves from 58.0--68.7\% to 66.5--70.1\%, gpt-oss-no-think moves from 56.4--65.5\% to 61.6--65.6\%, and qwen3-no-think moves from 52.2--55.6\% to 53.3--58.7\%. The mean reasoning field length is 1443 characters on AIME and 1174 characters on GPQA. Valid-verdict coverage is similar across conditions in the summary table: 94.9--97.7\% without deliberation and 95.1--98.4\% with deliberation.
 
@@ -392,7 +392,7 @@ LLM critique reliability cannot be read directly from a single structured prompt
 
 \section*{Data and Code Availability}
 
-The full project source code, prompt templates, experiment launchers, and analysis scripts are released at \url{https://github.com/juny116/identity-bias}. The manuscript source, frozen tables, and figures are released at \url{https://github.com/juny116/identity-bias-paper}. The project repository is organized to make the analysis artifacts traceable to the experimental logs: experiment launchers are in \texttt{experiments/}, model and prompt code is in \texttt{identity\_bias/}, analysis and artifact-freezing scripts are in \texttt{analysis/}, raw and cached run outputs are under \texttt{logs/}, and manuscript-ready frozen artifacts are in \texttt{paper/tables/} and \texttt{paper/figures/}. Caveat A samples were selected with random seed 42 by shuffling candidate identifiers and taking the requested wrong and correct examples per dataset; cached sample identifiers are stored under \texttt{logs/caveat\_a\_samples/}. The exact model identifiers used are \texttt{Qwen/Qwen3-32B} (with \texttt{enable\_thinking=False}), \texttt{openai/gpt-oss-20b} (with \texttt{reasoning\_effort=low}), and \texttt{google/gemma-4-31B-it}.
+The full project source code, prompt templates, experiment launchers, and analysis scripts are released at \url{https://github.com/juny116/identity-bias}. The manuscript source, frozen tables, and figures are released at \url{https://github.com/juny116/identity-bias-paper}. The project repository is organized to make the analysis artifacts traceable to the experimental logs: experiment launchers are in experiments/, model and prompt code is in identity\_bias/, analysis and artifact-freezing scripts are in analysis/, raw and cached run outputs are under logs/, and manuscript-ready frozen artifacts are in paper/tables/ and paper/figures/. Caveat A samples were selected with random seed 42 by shuffling candidate identifiers and taking the requested wrong and correct examples per dataset; cached sample identifiers are stored under logs/caveat\_a\_samples/. The exact model identifiers used are Qwen/Qwen3-32B (with enable\_thinking=False), openai/gpt-oss-20b (with reasoning\_effort=low), and google/gemma-4-31B-it.
 
 \section*{Acknowledgments}
 
@@ -561,14 +561,14 @@ Gemma-4 & AIME & 32 / 25 & +21.9 & +0.0 \\
 Gemma-4 & GPQA & 100 / 95 & +0.0 & +0.0 \\
 Gemma-4 & MMLU-Pro & 100 / 92 & +0.0 & -1.1 \\
 Gemma-4 & Olympiad & 100 / 79 & +8.0 & +0.0 \\
-\texttt{gpt-oss-no-think} & AIME & 47 / 25 & +23.4 & +12.0 \\
-\texttt{gpt-oss-no-think} & GPQA & 100 / 96 & +2.0 & +1.0 \\
-\texttt{gpt-oss-no-think} & MMLU-Pro & 100 / 96 & +2.0 & +0.0 \\
-\texttt{gpt-oss-no-think} & Olympiad & 100 / 65 & +1.0 & +0.0 \\
-\texttt{qwen3-no-think} & AIME & 70 / 68 & +12.9 & +10.3 \\
-\texttt{qwen3-no-think} & GPQA & 127 / 126 & -11.8 & -12.7 \\
-\texttt{qwen3-no-think} & MMLU-Pro & 167 / 165 & -4.2 & -4.2 \\
-\texttt{qwen3-no-think} & Olympiad & 178 / 168 & -1.7 & -2.4 \\
+gpt-oss-no-think & AIME & 47 / 25 & +23.4 & +12.0 \\
+gpt-oss-no-think & GPQA & 100 / 96 & +2.0 & +1.0 \\
+gpt-oss-no-think & MMLU-Pro & 100 / 96 & +2.0 & +0.0 \\
+gpt-oss-no-think & Olympiad & 100 / 65 & +1.0 & +0.0 \\
+qwen3-no-think & AIME & 70 / 68 & +12.9 & +10.3 \\
+qwen3-no-think & GPQA & 127 / 126 & -11.8 & -12.7 \\
+qwen3-no-think & MMLU-Pro & 167 / 165 & -4.2 & -4.2 \\
+qwen3-no-think & Olympiad & 178 / 168 & -1.7 & -2.4 \\
 \bottomrule
 \end{tabular}
 }
@@ -588,14 +588,14 @@ Gemma-4                   & Q1 & 58 & 863--14279     & 93.1 & 93.1 & 0.00   & [0
 Gemma-4                   & Q2 & 58 & 16420--74161   & 48.3 & 53.4 & +5.17  & [0.00, +12.07] \\
 Gemma-4                   & Q3 & 58 & 74364--105016  & 5.2  & 20.7 & +15.52 & [+6.90, +25.86] \\
 Gemma-4                   & Q4 & 58 & 105054--147524 & 8.6  & 13.8 & +5.17  & [-1.72, +13.79] \\
-\texttt{gpt-oss-no-think} & Q1 & 62 & 192--2285      & 74.2 & 80.6 & +6.45  & [-3.23, +16.13] \\
-\texttt{gpt-oss-no-think} & Q2 & 62 & 2301--3684     & 61.3 & 69.4 & +8.06  & [0.00, +17.74] \\
-\texttt{gpt-oss-no-think} & Q3 & 61 & 3743--6039     & 49.2 & 54.1 & +4.92  & [-9.88, +19.67] \\
-\texttt{gpt-oss-no-think} & Q4 & 62 & 6095--87075    & 51.6 & 54.8 & +3.23  & [-9.68, +16.13] \\
-\texttt{qwen3-no-think}   & Q1 & 116& 729--4094      & 69.0 & 67.2 & -1.72  & [-6.90, +2.59] \\
-\texttt{qwen3-no-think}   & Q2 & 121& 4126--7892     & 50.4 & 57.0 & +6.61  & [+0.83, +12.40] \\
-\texttt{qwen3-no-think}   & Q3 & 117& 8028--73143    & 56.4 & 57.3 & +0.85  & [-4.27, +5.98] \\
-\texttt{qwen3-no-think}   & Q4 & 120& 73285--147524  & 10.0 & 7.5  & -2.50  & [-5.83, 0.00] \\
+gpt-oss-no-think & Q1 & 62 & 192--2285      & 74.2 & 80.6 & +6.45  & [-3.23, +16.13] \\
+gpt-oss-no-think & Q2 & 62 & 2301--3684     & 61.3 & 69.4 & +8.06  & [0.00, +17.74] \\
+gpt-oss-no-think & Q3 & 61 & 3743--6039     & 49.2 & 54.1 & +4.92  & [-9.88, +19.67] \\
+gpt-oss-no-think & Q4 & 62 & 6095--87075    & 51.6 & 54.8 & +3.23  & [-9.68, +16.13] \\
+qwen3-no-think   & Q1 & 116& 729--4094      & 69.0 & 67.2 & -1.72  & [-6.90, +2.59] \\
+qwen3-no-think   & Q2 & 121& 4126--7892     & 50.4 & 57.0 & +6.61  & [+0.83, +12.40] \\
+qwen3-no-think   & Q3 & 117& 8028--73143    & 56.4 & 57.3 & +0.85  & [-4.27, +5.98] \\
+qwen3-no-think   & Q4 & 120& 73285--147524  & 10.0 & 7.5  & -2.50  & [-5.83, 0.00] \\
 \bottomrule
 \end{tabular}
 }
@@ -617,17 +617,17 @@ Gemma-4 & GPQA & 232 & +6.5 & +3.4 & +9.9 \\
 Gemma-4 & MMLU-Pro & 232 & +6.5 & +3.4 & +9.9 \\
 Gemma-4 & Olympiad & 232 & +3.0 & +0.4 & +6.0 \\
 \midrule
-\texttt{gpt-oss-no-think} & none & 347 & +4.6 & +0.0 & +9.2 \\
-\texttt{gpt-oss-no-think} & AIME & 300 & +1.7 & -3.0 & +6.3 \\
-\texttt{gpt-oss-no-think} & GPQA & 247 & +5.7 & +0.0 & +10.9 \\
-\texttt{gpt-oss-no-think} & MMLU-Pro & 247 & +5.7 & -0.4 & +11.7 \\
-\texttt{gpt-oss-no-think} & Olympiad & 247 & +6.1 & +0.4 & +11.7 \\
+gpt-oss-no-think & none & 347 & +4.6 & +0.0 & +9.2 \\
+gpt-oss-no-think & AIME & 300 & +1.7 & -3.0 & +6.3 \\
+gpt-oss-no-think & GPQA & 247 & +5.7 & +0.0 & +10.9 \\
+gpt-oss-no-think & MMLU-Pro & 247 & +5.7 & -0.4 & +11.7 \\
+gpt-oss-no-think & Olympiad & 247 & +6.1 & +0.4 & +11.7 \\
 \midrule
-\texttt{qwen3-no-think} & none & 356 & +0.6 & -2.5 & +3.7 \\
-\texttt{qwen3-no-think} & AIME & 287 & -0.3 & -3.8 & +2.8 \\
-\texttt{qwen3-no-think} & GPQA & 268 & -1.1 & -4.5 & +2.2 \\
-\texttt{qwen3-no-think} & MMLU-Pro & 257 & +2.3 & -1.2 & +5.8 \\
-\texttt{qwen3-no-think} & Olympiad & 256 & +1.6 & -2.0 & +5.5 \\
+qwen3-no-think & none & 356 & +0.6 & -2.5 & +3.7 \\
+qwen3-no-think & AIME & 287 & -0.3 & -3.8 & +2.8 \\
+qwen3-no-think & GPQA & 268 & -1.1 & -4.5 & +2.2 \\
+qwen3-no-think & MMLU-Pro & 257 & +2.3 & -1.2 & +5.8 \\
+qwen3-no-think & Olympiad & 256 & +1.6 & -2.0 & +5.5 \\
 \bottomrule
 \end{tabular}
 }
@@ -647,13 +647,13 @@ Gemma-4 & Instructed vs neutral & -0.048 & 0.030 & 0.95 & [0.90, 1.01] & 0.101 \
 Gemma-4 & Schema vs neutral & -0.024 & 0.017 & 0.98 & [0.94, 1.01] & 0.155 \\
 Gemma-4 & Repair vs neutral & +0.181 & 0.052 & 1.20 & [1.08, 1.33] & $<0.001$ \\
 \midrule
-\texttt{gpt-oss-no-think} & Instructed vs neutral & -0.135 & 0.097 & 0.87 & [0.72, 1.06] & 0.165 \\
-\texttt{gpt-oss-no-think} & Schema vs neutral & +0.013 & 0.099 & 1.01 & [0.83, 1.23] & 0.900 \\
-\texttt{gpt-oss-no-think} & Repair vs neutral & +0.207 & 0.108 & 1.23 & [1.00, 1.52] & 0.055 \\
+gpt-oss-no-think & Instructed vs neutral & -0.135 & 0.097 & 0.87 & [0.72, 1.06] & 0.165 \\
+gpt-oss-no-think & Schema vs neutral & +0.013 & 0.099 & 1.01 & [0.83, 1.23] & 0.900 \\
+gpt-oss-no-think & Repair vs neutral & +0.207 & 0.108 & 1.23 & [1.00, 1.52] & 0.055 \\
 \midrule
-\texttt{qwen3-no-think} & Instructed vs neutral & -0.484 & 0.069 & 0.62 & [0.54, 0.71] & $<0.001$ \\
-\texttt{qwen3-no-think} & Schema vs neutral & -0.238 & 0.058 & 0.79 & [0.70, 0.88] & $<0.001$ \\
-\texttt{qwen3-no-think} & Repair vs neutral & +0.023 & 0.063 & 1.02 & [0.90, 1.16] & 0.715 \\
+qwen3-no-think & Instructed vs neutral & -0.484 & 0.069 & 0.62 & [0.54, 0.71] & $<0.001$ \\
+qwen3-no-think & Schema vs neutral & -0.238 & 0.058 & 0.79 & [0.70, 0.88] & $<0.001$ \\
+qwen3-no-think & Repair vs neutral & +0.023 & 0.063 & 1.02 & [0.90, 1.16] & 0.715 \\
 \bottomrule
 \end{tabular}
 }
@@ -675,18 +675,18 @@ Gemma-4 & Verdict+repair & 1596 & 133 & 8.3 \\
 Gemma-4 & Verdict+repair reversed & 1596 & 91 & 5.7 \\
 Gemma-4 & Schema-matched verdict & 1596 & 12 & 0.8 \\
 \midrule
-\texttt{gpt-oss-no-think} & Legacy full & 8772 & 1079 & 12.3 \\
-\texttt{gpt-oss-no-think} & Verdict-only instructed & 1620 & 96 & 5.9 \\
-\texttt{gpt-oss-no-think} & Verdict-only neutral & 1620 & 125 & 7.7 \\
-\texttt{gpt-oss-no-think} & Verdict+repair & 1620 & 171 & 10.6 \\
-\texttt{gpt-oss-no-think} & Verdict+repair reversed & 1620 & 115 & 7.1 \\
-\texttt{gpt-oss-no-think} & Schema-matched verdict & 1620 & 105 & 6.5 \\
+gpt-oss-no-think & Legacy full & 8772 & 1079 & 12.3 \\
+gpt-oss-no-think & Verdict-only instructed & 1620 & 96 & 5.9 \\
+gpt-oss-no-think & Verdict-only neutral & 1620 & 125 & 7.7 \\
+gpt-oss-no-think & Verdict+repair & 1620 & 171 & 10.6 \\
+gpt-oss-no-think & Verdict+repair reversed & 1620 & 115 & 7.1 \\
+gpt-oss-no-think & Schema-matched verdict & 1620 & 105 & 6.5 \\
 \midrule
-\texttt{qwen3-no-think} & Legacy full & 8746 & 257 & 2.9 \\
-\texttt{qwen3-no-think} & Verdict-only instructed & 3177 & 35 & 1.1 \\
-\texttt{qwen3-no-think} & Verdict-only neutral & 3177 & 45 & 1.4 \\
-\texttt{qwen3-no-think} & Verdict+repair & 3177 & 98 & 3.1 \\
-\texttt{qwen3-no-think} & Schema-matched verdict & 3177 & 63 & 2.0 \\
+qwen3-no-think & Legacy full & 8746 & 257 & 2.9 \\
+qwen3-no-think & Verdict-only instructed & 3177 & 35 & 1.1 \\
+qwen3-no-think & Verdict-only neutral & 3177 & 45 & 1.4 \\
+qwen3-no-think & Verdict+repair & 3177 & 98 & 3.1 \\
+qwen3-no-think & Schema-matched verdict & 3177 & 63 & 2.0 \\
 \bottomrule
 \end{tabular}
 }
@@ -707,16 +707,16 @@ Gemma-4 & Verdict+repair & anonymous & 162 & 18.5 & 53.8 \\
 Gemma-4 & Verdict+repair & other model & 166 & 15.1 & 50.0 \\
 Gemma-4 & Verdict+repair & weak model & 166 & 16.9 & 56.2 \\
 \midrule
-\texttt{gpt-oss-no-think} & Legacy full & anonymous & 824 & 17.0 & 74.4 \\
-\texttt{gpt-oss-no-think} & Verdict+repair & anonymous & 66 & 13.6 & 100.0 \\
-\texttt{gpt-oss-no-think} & Verdict+repair & self & 75 & 17.3 & 100.0 \\
-\texttt{gpt-oss-no-think} & Verdict+repair reversed & anonymous & 58 & 25.9 & 100.0 \\
-\texttt{gpt-oss-no-think} & Verdict+repair reversed & self & 60 & 25.0 & 72.7 \\
+gpt-oss-no-think & Legacy full & anonymous & 824 & 17.0 & 74.4 \\
+gpt-oss-no-think & Verdict+repair & anonymous & 66 & 13.6 & 100.0 \\
+gpt-oss-no-think & Verdict+repair & self & 75 & 17.3 & 100.0 \\
+gpt-oss-no-think & Verdict+repair reversed & anonymous & 58 & 25.9 & 100.0 \\
+gpt-oss-no-think & Verdict+repair reversed & self & 60 & 25.0 & 72.7 \\
 \midrule
-\texttt{gpt-oss-think} & Legacy full & anonymous & 688 & 33.4 & 61.2 \\
-\texttt{qwen3-no-think} & Legacy full & anonymous & 2680 & 15.0 & 69.7 \\
-\texttt{qwen3-no-think} & Verdict+repair & anonymous & 231 & 10.8 & 68.8 \\
-\texttt{qwen3-no-think} & Verdict+repair & self & 244 & 8.6 & 57.1 \\
+gpt-oss-think & Legacy full & anonymous & 688 & 33.4 & 61.2 \\
+qwen3-no-think & Legacy full & anonymous & 2680 & 15.0 & 69.7 \\
+qwen3-no-think & Verdict+repair & anonymous & 231 & 10.8 & 68.8 \\
+qwen3-no-think & Verdict+repair & self & 244 & 8.6 & 57.1 \\
 \bottomrule
 \end{tabular}
 }
@@ -744,34 +744,34 @@ Gemma-4 & Verdict+repair reversed & AIME & 34 & 2.9 & 1 & 100.0 \\
 Gemma-4 & Verdict+repair reversed & GPQA & 139 & 6.5 & 0 & -- \\
 Gemma-4 & Verdict+repair reversed & MMLU-Pro & 88 & 56.8 & 4 & 100.0 \\
 Gemma-4 & Verdict+repair reversed & Olympiad & 59 & 15.3 & 1 & 100.0 \\
-\texttt{gpt-oss-no-think} & Legacy full & AIME & 301 & 22.9 & 24 & 87.5 \\
-\texttt{gpt-oss-no-think} & Legacy full & GPQA & 1430 & 0.3 & 366 & 100.0 \\
-\texttt{gpt-oss-no-think} & Legacy full & MMLU-Pro & 1546 & 23.9 & 619 & 74.0 \\
-\texttt{gpt-oss-no-think} & Legacy full & Olympiad & 1332 & 25.6 & 112 & 48.2 \\
-\texttt{gpt-oss-no-think} & Verdict+repair & AIME & 29 & 34.5 & 3 & 100.0 \\
-\texttt{gpt-oss-no-think} & Verdict+repair & GPQA & 88 & 0.0 & 23 & 100.0 \\
-\texttt{gpt-oss-no-think} & Verdict+repair & MMLU-Pro & 60 & 30.0 & 15 & 100.0 \\
-\texttt{gpt-oss-no-think} & Verdict+repair & Olympiad & 33 & 21.2 & 1 & 0.0 \\
-\texttt{gpt-oss-no-think} & Verdict+repair reversed & AIME & 35 & 37.1 & 2 & 100.0 \\
-\texttt{gpt-oss-no-think} & Verdict+repair reversed & GPQA & 49 & 2.0 & 12 & 100.0 \\
-\texttt{gpt-oss-no-think} & Verdict+repair reversed & MMLU-Pro & 51 & 43.1 & 7 & 85.7 \\
-\texttt{gpt-oss-no-think} & Verdict+repair reversed & Olympiad & 46 & 19.6 & 4 & 50.0 \\
-\texttt{gpt-oss-think} & Legacy full & AIME & 299 & 84.6 & 29 & 10.3 \\
-\texttt{gpt-oss-think} & Legacy full & GPQA & 919 & 0.0 & 243 & 100.0 \\
-\texttt{gpt-oss-think} & Legacy full & MMLU-Pro & 948 & 15.8 & 522 & 58.0 \\
-\texttt{gpt-oss-think} & Legacy full & Olympiad & 1281 & 56.0 & 132 & 25.8 \\
-\texttt{qwen3} & Legacy full & AIME & 355 & 11.8 & 175 & 57.1 \\
-\texttt{qwen3} & Legacy full & GPQA & 592 & 0.0 & 593 & 100.0 \\
-\texttt{qwen3} & Legacy full & MMLU-Pro & 609 & 26.8 & 670 & 60.6 \\
-\texttt{qwen3} & Legacy full & Olympiad & 2678 & 37.1 & 312 & 51.0 \\
-\texttt{qwen3-no-think} & Legacy full & AIME & 1535 & 1.4 & 657 & 56.2 \\
-\texttt{qwen3-no-think} & Legacy full & GPQA & 1923 & 0.0 & 1479 & 99.9 \\
-\texttt{qwen3-no-think} & Legacy full & MMLU-Pro & 2234 & 21.2 & 2030 & 70.0 \\
-\texttt{qwen3-no-think} & Legacy full & Olympiad & 8946 & 19.0 & 2191 & 51.6 \\
-\texttt{qwen3-no-think} & Verdict+repair & AIME & 134 & 2.2 & 56 & 41.1 \\
-\texttt{qwen3-no-think} & Verdict+repair & GPQA & 238 & 0.0 & 49 & 100.0 \\
-\texttt{qwen3-no-think} & Verdict+repair & MMLU-Pro & 187 & 23.5 & 25 & 72.0 \\
-\texttt{qwen3-no-think} & Verdict+repair & Olympiad & 192 & 15.1 & 40 & 40.0 \\
+gpt-oss-no-think & Legacy full & AIME & 301 & 22.9 & 24 & 87.5 \\
+gpt-oss-no-think & Legacy full & GPQA & 1430 & 0.3 & 366 & 100.0 \\
+gpt-oss-no-think & Legacy full & MMLU-Pro & 1546 & 23.9 & 619 & 74.0 \\
+gpt-oss-no-think & Legacy full & Olympiad & 1332 & 25.6 & 112 & 48.2 \\
+gpt-oss-no-think & Verdict+repair & AIME & 29 & 34.5 & 3 & 100.0 \\
+gpt-oss-no-think & Verdict+repair & GPQA & 88 & 0.0 & 23 & 100.0 \\
+gpt-oss-no-think & Verdict+repair & MMLU-Pro & 60 & 30.0 & 15 & 100.0 \\
+gpt-oss-no-think & Verdict+repair & Olympiad & 33 & 21.2 & 1 & 0.0 \\
+gpt-oss-no-think & Verdict+repair reversed & AIME & 35 & 37.1 & 2 & 100.0 \\
+gpt-oss-no-think & Verdict+repair reversed & GPQA & 49 & 2.0 & 12 & 100.0 \\
+gpt-oss-no-think & Verdict+repair reversed & MMLU-Pro & 51 & 43.1 & 7 & 85.7 \\
+gpt-oss-no-think & Verdict+repair reversed & Olympiad & 46 & 19.6 & 4 & 50.0 \\
+gpt-oss-think & Legacy full & AIME & 299 & 84.6 & 29 & 10.3 \\
+gpt-oss-think & Legacy full & GPQA & 919 & 0.0 & 243 & 100.0 \\
+gpt-oss-think & Legacy full & MMLU-Pro & 948 & 15.8 & 522 & 58.0 \\
+gpt-oss-think & Legacy full & Olympiad & 1281 & 56.0 & 132 & 25.8 \\
+qwen3 & Legacy full & AIME & 355 & 11.8 & 175 & 57.1 \\
+qwen3 & Legacy full & GPQA & 592 & 0.0 & 593 & 100.0 \\
+qwen3 & Legacy full & MMLU-Pro & 609 & 26.8 & 670 & 60.6 \\
+qwen3 & Legacy full & Olympiad & 2678 & 37.1 & 312 & 51.0 \\
+qwen3-no-think & Legacy full & AIME & 1535 & 1.4 & 657 & 56.2 \\
+qwen3-no-think & Legacy full & GPQA & 1923 & 0.0 & 1479 & 99.9 \\
+qwen3-no-think & Legacy full & MMLU-Pro & 2234 & 21.2 & 2030 & 70.0 \\
+qwen3-no-think & Legacy full & Olympiad & 8946 & 19.0 & 2191 & 51.6 \\
+qwen3-no-think & Verdict+repair & AIME & 134 & 2.2 & 56 & 41.1 \\
+qwen3-no-think & Verdict+repair & GPQA & 238 & 0.0 & 49 & 100.0 \\
+qwen3-no-think & Verdict+repair & MMLU-Pro & 187 & 23.5 & 25 & 72.0 \\
+qwen3-no-think & Verdict+repair & Olympiad & 192 & 15.1 & 40 & 40.0 \\
 \bottomrule
 \end{tabular}
 }
@@ -799,7 +799,7 @@ qwen3-no-think & Legacy full & 10.4 & 69.4 \\
 qwen3-no-think & Verdict+repair & 10.2 & 63.3 \\
 \bottomrule
 \end{tabular}
-\caption{Equal-dataset-weighted repair-quality summary (\texttt{appendix\_macro\_repair\_quality.csv}). Rep.\,Succ.\ = repair-success rate among correctly rejected wrong items. Harmful = harmful-correction rate among falsely rejected correct items. Rates are percentages.}
+\caption{Equal-dataset-weighted repair-quality summary (appendix\_macro\_repair\_quality.csv). Rep.\,Succ.\ = repair-success rate among correctly rejected wrong items. Harmful = harmful-correction rate among falsely rejected correct items. Rates are percentages.}
 \label{tab:macro-repair-quality}
 \end{table}
 
@@ -815,16 +815,16 @@ Gemma-4 & Legacy full & 8772 & 0.258 & 0.941 & 0.685 \\
 Gemma-4 & Verdict-only neutral & 1596 & 0.314 & 0.989 & 0.682 \\
 Gemma-4 & Verdict+repair & 1596 & 0.290 & 0.944 & 0.659 \\
 \midrule
-\texttt{gpt-oss-no-think} & Legacy full & 46784 & 0.389 & 0.920 & 0.537 \\
-\texttt{gpt-oss-no-think} & Verdict-only neutral & 1620 & 0.395 & 0.939 & 0.544 \\
-\texttt{gpt-oss-no-think} & Verdict+repair & 1620 & 0.404 & 0.919 & 0.527 \\
-\texttt{gpt-oss-no-think} & Verdict+repair reversed & 1620 & 0.399 & 0.940 & 0.543 \\
+gpt-oss-no-think & Legacy full & 46784 & 0.389 & 0.920 & 0.537 \\
+gpt-oss-no-think & Verdict-only neutral & 1620 & 0.395 & 0.939 & 0.544 \\
+gpt-oss-no-think & Verdict+repair & 1620 & 0.404 & 0.919 & 0.527 \\
+gpt-oss-no-think & Verdict+repair reversed & 1620 & 0.399 & 0.940 & 0.543 \\
 \midrule
-\texttt{gpt-oss-think} & Legacy full & 36640 & 0.332 & 0.915 & 0.584 \\
-\texttt{qwen3} & Legacy full & 36451 & 0.268 & 0.960 & 0.695 \\
-\texttt{qwen3-no-think} & Legacy full & 83039 & 0.275 & 0.915 & 0.669 \\
-\texttt{qwen3-no-think} & Verdict-only neutral & 3177 & 0.463 & 0.794 & 0.614 \\
-\texttt{qwen3-no-think} & Verdict+repair & 3177 & 0.416 & 0.838 & 0.604 \\
+gpt-oss-think & Legacy full & 36640 & 0.332 & 0.915 & 0.584 \\
+qwen3 & Legacy full & 36451 & 0.268 & 0.960 & 0.695 \\
+qwen3-no-think & Legacy full & 83039 & 0.275 & 0.915 & 0.669 \\
+qwen3-no-think & Verdict-only neutral & 3177 & 0.463 & 0.794 & 0.614 \\
+qwen3-no-think & Verdict+repair & 3177 & 0.416 & 0.838 & 0.604 \\
 \bottomrule
 \end{tabular}
 }
@@ -853,7 +853,7 @@ qwen3-no-think & Verdict-only neutral & 0.460 \\
 qwen3-no-think & Verdict+repair & 0.419 \\
 \bottomrule
 \end{tabular}
-\caption{Equal-dataset-weighted ECE summary (\texttt{appendix\_macro\_calibration.csv}). The qwen3-no-think interface-dependent calibration shift remains visible under macro averaging.}
+\caption{Equal-dataset-weighted ECE summary (appendix\_macro\_calibration.csv). The qwen3-no-think interface-dependent calibration shift remains visible under macro averaging.}
 \label{tab:macro-calibration}
 \end{table}
 
