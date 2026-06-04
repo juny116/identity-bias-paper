@@ -13,3 +13,10 @@
 *.nav
 *.snm
 *.vrb
+
+# Generated analysis artifacts used to create committed manuscript figures.
+# Keep frozen manuscript tables tracked explicitly by name; ignore regenerated
+# interface-confound/revision sweeps unless deliberately promoted.
+tables/ifc_*.csv
+tables/revision_v3_*.csv
+tables/revision_v4_*.csv
