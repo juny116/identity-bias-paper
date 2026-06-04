@@ -49,6 +49,10 @@
 Large language models (LLMs) are increasingly used as judges for benchmark construction, model selection, and critique-repair pipelines. These evaluations usually specify the judge model, but they often leave the judge-side output interface under-specified. This paper studies whether benign interface choices, such as rubric structure, score-versus-verdict order, schema field order, and repair coupling, can act as a measurement confound. Holding judged content fixed and using constrained decoding, we compare multiple judge models across reasoning datasets under several common output interfaces. We find that interface choices do more than shift absolute accuracy: they can change pairwise judge gaps, alter adjacent model orderings, and mask task-specific reversals when results are pooled. The effect is not uniform across models or datasets, which is precisely the methodological risk for LLM-as-judge comparisons. We also observe that verdict changes occur at the item level, especially on wrong candidate solutions, rather than only as aggregate noise. A secondary ablation suggests that adding an explicit deliberation field to the output contract can reduce interface sensitivity in the tested setting, but this should be understood as another interface design choice rather than a general solution. Together, these results characterize a form of interface-dependent measurement variation in LLM-as-judge evaluation. They suggest that some reported judge differences may partly reflect the output contract used to elicit the verdict, motivating analyses that report the judge interface and check whether model comparisons are stable under reasonable interface variants.
 \end{abstract}
 
+\begin{IEEEkeywords}
+LLM-as-a-judge, model evaluation, prompt sensitivity, structured output, critique systems, measurement validity.
+\end{IEEEkeywords}
+
 \section{Introduction}
 \label{sec:intro}
 
@@ -348,47 +352,54 @@ The practical reading is narrow. Adding a leading deliberation field appears to 
 \section{Discussion}
 \label{sec:discussion}
 
-\subsection{What the Paper Shows}
+\subsection{What the Analysis Shows}
 \label{sec:discussion-shows}
 
-The main result is that LLM critic verdicts are interface-contingent measurements. In this correction-oriented setup, ordinary identity labels produce small shifts, while prompt-interface perturbations change verdict outcomes, parse reliability, calibration, and downstream repair behavior. The repair-coupled prompt was the motivating case, but parser-aware replay separates the effects into three categories: pure parser artifacts, weakened effects, and robust behavioral shifts. The behavioral core is the qwen3-no-think instruction and schema sensitivity and the Gemma-4 answer-first field-order effect. The measurement core is that the largest apparent verdict-plus-repair contrast can change sign under different parser fallback policies. A single structured critic call should therefore not be treated as a stable measurement of model judgment unless the output contract and parser behavior are part of the measurement.
+The main result is that LLM judge comparisons are interface-contingent measurements. The experiment holds the judged content fixed and changes only the output contract imposed on the judge. Under that design, interface choices change pairwise judge gaps, adjacent rank orderings, and item-level verdicts. The effect is not a uniform prompt penalty applied to every judge. It is an interaction: different judges respond differently to the same output interface, and that interaction itself changes across task families.
 
-\subsection{Why the Parser Finding Matters}
-\label{sec:discussion-parser}
+This distinction is the paper's central boundary with prior prompt-sensitivity work. If all judges shifted similarly under a new prompt format, a leaderboard comparison could remain stable even while absolute accuracy changed. The results here show a more consequential failure mode. A judge model can appear better than an adjacent model under one reasonable interface and worse under another, even when the candidate solutions and ground-truth labels are unchanged.
 
-The parser finding is not a nuisance detail. It is a substantive measurement result. A structured-output critic can fail in two ways at once: it can make the wrong judgment, or it can produce an output that the evaluation pipeline maps into a judgment. When the fallback maps malformed responses to acceptance, parse failures on wrong items mechanically increase FAR. When the same failures are mapped to rejection, the sign of the Gemma-4 verdict-plus-repair contrast reverses. This does not make the interface harmless; it means the fallback policy is itself part of the interface being evaluated. The included parsed-output metric measures the deployed structured interface, while parser-aware exclusion helps isolate behavioral verdict changes.
+\subsection{Why Task Family Matters}
+\label{sec:discussion-task-family}
 
-\subsection{Practical Recommendations}
+The pooled two-way interaction is not the right summary of the phenomenon. In this study, the direction of the judge-by-interface effect changes across task families. Repair-then-verdict favors gpt-oss-no-think over Gemma-4-no-think on AIME, but the same interface favors Gemma-4-no-think on GPQA and MMLU-Pro. Averaging these directions can produce a null pooled interaction even when the per-dataset interactions are visible and the three-way judge-by-interface-by-dataset test is non-null.
+
+For evaluation practice, this means that interface robustness is not only a property of a judge model. It is a property of a judge, an interface, and a task distribution together. A report that tests only one task family may overstate how general an interface effect is. A report that pools task families without checking heterogeneity may hide the exact instability that matters for model comparison.
+
+\subsection{Implications for Reporting LLM-Judge Results}
 \label{sec:discussion-practical}
 
-The practical recommendation is to separate measurement from intervention. A critique pipeline should first elicit a neutral verdict-only response, persist parse status, and only then request repair if the verdict rejects the candidate solution. Reports should separate false acceptance, false rejection, parse failure, repair success, harmful correction, and calibration. Confidence thresholds should be reported with coverage, because abstention can concentrate high-confidence false accepts rather than remove them. N-of-K voting can be useful as an ensemble method, but it costs more calls and does not replace the need for a clean first-stage verdict.
+The analysis supports a reporting norm rather than a new universal judging protocol. LLM-as-judge studies should report the output interface as part of the measurement design: the schema, field order, scoring order, rubric fields, repair fields, confidence fields, decoding constraints, and non-verdict handling policy. When a paper compares judge models, it should also check whether the adjacent model comparison is stable under reasonable interface variants, especially when the observed gap is small.
 
-\subsection{Relationship to Identity-Bias Work}
-\label{sec:discussion-identity}
+Repair-coupled interfaces deserve particular care. They are common in critique-repair pipelines, but they combine two roles that are analytically different: measuring whether a candidate solution is correct and producing a replacement answer. The present results do not imply that repair should never be requested. They imply that the verdict used to compare judges should be measured separately from any downstream repair action unless the coupled interface is itself the object being evaluated.
 
-The identity-swap results should be read as a scoped negative result. Prior work shows that LLMs can exhibit self-preference and source-framing biases in evaluation settings \citep{panickssery2024selfpreference, lehr2025extremeselfpreference, germani2025sourceframing}. Our data show that those effects do not dominate in this correction-oriented protocol. The same solution presented as self, anonymous, human, or another model produces only small shifts in false acceptance compared with the shifts produced by interface perturbations. This difference may arise because correction-oriented critique requires error detection rather than preference ranking, because the JSON schema constrains the response, or because the datasets expose a broad over-acceptance failure that swamps identity labels.
+\subsection{Deliberation as an Interface Choice}
+\label{sec:discussion-deliberation}
+
+The deliberation-in-schema ablation is best read narrowly. Adding a required reasoning field before the verdict stabilizes the tested AIME and GPQA comparisons and improves balanced accuracy in several cells. That is useful evidence that some interface choices can reduce instability. It is not evidence that private reasoning ability generally solves judge brittleness. The intervention changes the output contract by forcing an explicit deliberation slot before the verdict, so it is itself part of the interface design space.
+
+This matters for how mitigation claims should be written. A stable interface is not automatically a model capability improvement. It may be a better measurement interface for the task distribution under study. Future work should therefore compare candidate judge interfaces by both accuracy and comparison stability, rather than assuming that more reasoning text, more rubric fields, or more structured output is always better.
 
 \section{Limitations}
 \label{sec:limitations}
 
-First, the results are critic- and dataset-dependent. The paper no longer claims a universal behavioral effect of repair requests. Instead, it claims interface brittleness, supported by interface-versus-identity variation, parser-aware replay, instruction and schema effects, field-order sensitivity, calibration shifts, and repair-utility results. The exact magnitude and direction of each perturbation depends on the critic and dataset.
+First, the experiment uses three local judge families. This is enough to test whether model comparisons can depend on the judge-side interface, but it is not enough to characterize the full space of frontier and specialized evaluator models. The claim should therefore be read as an empirical demonstration of interface-contingent comparison, not as a ranking of all available judge models.
 
-Second, parser-aware replay is reconstructed offline from stored raw responses rather than from a parser flag persisted at generation time. This is sufficient to audit the main artifact because the raw response is available, but future experiments should persist parse status directly in the logging schema. The production fallback remains a design choice: it is conservative for preserving candidate answers but permissive for FAR on wrong items.
+Second, the task set is intentionally restricted to problems with objective ground truth. This makes false acceptance, false rejection, and balanced accuracy well defined, and it avoids relying on another LLM to score the judge. The same design choice limits generalization to open-ended writing, summarization, dialogue quality, and subjective preference tasks, where there may be no single automatic correctness label.
 
-Third, the results are prompt-specific. The analysis covers several prompt-interface variants, including no-repair instruction, schema-matched verdicts, verdict-plus-repair, and field-order reversal, but other templates may reduce or amplify the same failure modes. This is not a reason to ignore the result; it is the reason the result matters. Interface choices that appear minor can change both verdict behavior and structured-output reliability.
+Third, the candidate pool is small by benchmark-leaderboard standards: 75 sampled candidate solutions per dataset before uniform context-overflow exclusions. The design gains paired control because every judge-interface cell sees the same candidates, but larger samples would give sharper estimates of pairwise gap changes and task-specific rank instability.
 
-Fourth, the experiments focus on reasoning benchmarks with checkable answers. This makes false acceptance and correction success measurable, but it may not generalize to open-ended writing, summarization, or subjective preference evaluation. In open-ended domains, the boundary between verdict and repair may be less crisp, and human evaluation may be needed to assess whether a repair improved the output.
+Fourth, the interface variants are representative rather than exhaustive. We test verdict-only, rubric-verdict, score-then-verdict, verdict-plus-repair, and repair-then-verdict, along with a deliberation-in-schema subset. Other schemas, rubric granularities, confidence formats, and constrained-decoding implementations may produce different magnitudes. The paper's claim is therefore about interface dependence and comparison instability, not about a universal ordering of all possible interfaces.
 
-Fifth, thinking-enabled critics are analyzed through legacy full-call data rather than a full parser-aware Caveat A sweep. The existing data answer the reviewer-facing question that thinking does not automatically reduce over-acceptance, while also showing that thinking can improve repair quality. A fully matched thinking-enabled prompt-interface ablation remains useful follow-up work.
+Fifth, constrained decoding reduces literal JSON failures but does not eliminate all non-verdicts. Long candidate solutions create uniform context-overflow exclusions, and some judge-interface cells have lower valid-verdict coverage because of truncation. We report coverage so that verdict effects are not confused with missingness, but larger-context runs would reduce this nuisance layer.
 
-Sixth, some legacy source-framing runs were collected across multiple log subdirectories and solver configurations. The main prompt-interface ablation uses locked sample identifiers and paired prompt variants to avoid this issue. Legacy identity and thinking-mode results are used primarily as contextual evidence rather than as the sole basis for the central claim.
+Finally, deliberation-in-schema is only a secondary ablation on AIME and GPQA. It shows that an explicit reasoning field can stabilize the tested comparisons, but it should not be treated as a general mitigation without broader model and task coverage.
 
-Finally, answer-checking functions are imperfect. Mathematical equivalence, multiple-choice extraction, and boxed-answer parsing can introduce noise. Because the core comparisons are paired across prompt variants, such noise should affect paired arms similarly, but absolute rates should still be interpreted with this measurement layer in mind.
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-LLM critique reliability cannot be read directly from a single structured prompt. In our experiments, ordinary identity labels produce small shifts, while prompt-interface perturbations alter verdicts, parse reliability, calibration, and repair outcomes. The apparent repair-request effect that motivated the study is itself a cautionary example: once parse failures are audited, the strongest false-acceptance contrast is artifact-dominated. The surviving lesson is broader and more practical. Critique systems should separate measurement from intervention: first elicit and log a neutral verdict with parse status, then request repair only as a downstream action, and evaluate repair success and harmful correction separately.
+LLM judge reliability cannot be read from the judge model name alone. Holding judged content fixed under constrained decoding, this study shows that benign output-interface choices can change pairwise judge gaps, adjacent rankings, and item-level verdicts. The direction of the interaction depends on the task family, so pooled summaries can hide the instability rather than resolve it. The practical conclusion is modest but important: an LLM judge result is a measurement produced by a model, a task distribution, and an output interface together. Reports that compare judge models should therefore specify the interface and test whether the comparison is stable under reasonable interface variants.
 
 \section*{Data and Code Availability}
 
