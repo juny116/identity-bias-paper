@@ -377,6 +377,34 @@ Deliberation & MMLU-Pro & 3.6 & 1 \\
 
 The practical reading remains narrow. Adding a leading deliberation field stabilizes the measured comparison in this matrix, but it should not be described as proof that model reasoning ability solves judge brittleness. It is a controlled output-interface intervention, and its success reinforces the main thesis: the judge interface changes the measurement.
 
+\subsection{Subjective Pairwise Judging Shows Smaller but Real Interface Drift}
+\label{sec:results-subjective}
+
+The objective experiments provide measurable correctness, but many LLM-as-judge deployments are used precisely when no deterministic gold answer exists. We therefore ran a deployment-validity diagnostic on 150 RewardBench preference pairs from chat, chat-hard, and safety categories, excluding code and math. The task is pairwise A-vs-B preference judging with randomized A/B order. The five interfaces mirror the objective design at the level of output contract: choice-only, rubric-then-choice, score-then-choice, choice-then-feedback, and feedback-then-choice. The primary metric is label-free preference instability: whether the same judge changes its A/B choice on the same pair across interfaces. Agreement with the curated chosen side is reported only as a secondary preference-alignment diagnostic, not as deterministic accuracy.
+
+The subjective extension shows that the confound is not confined to objective verification, but it is smaller and more judge-dependent in this setting (Table~\ref{tab:subjective-control}). Interface preference-flip rates are 6.0\% for Gemma-4-no-think, 16.0\% for gpt-oss-no-think, and 18.0\% for qwen3-no-think. The order-swap control shows that position bias is a major co-factor: position-driven flips are 4.0\%, 13.4\%, and 10.7\%, respectively. After subtracting this control estimate, the interface drift beyond position bias is +2.0 points for Gemma-4-no-think, +2.6 points for gpt-oss-no-think, and +7.3 points for qwen3-no-think. The range in curated chosen-side agreement across interfaces follows the same pattern: 2.0 points for Gemma-4-no-think, 3.4 points for gpt-oss-no-think, and 8.6 points for qwen3-no-think.
+
+Thus benign output interfaces also shift real subjective preferences, especially for the weakest judge, but the effect should be read honestly. In this RewardBench diagnostic, interface-induced subjective preference drift is not as large as the objective verifier instability, and for gpt-oss-no-think much of the raw flip rate is entangled with A/B position sensitivity. The result supports deployment validity for the interface-confound claim while showing that position bias and judge strength must be separated from interface effects in no-gold judging.
+
+\begin{table}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lrrrr}
+\toprule
+Judge & Interface flips & Position flips & Beyond position & Chosen range \\
+\midrule
+Gemma-4 & 6.0 & 4.0 & +2.0 & 2.0 \\
+gpt-oss & 16.0 & 13.4 & +2.6 & 3.4 \\
+qwen3 & 18.0 & 10.7 & +7.3 & 8.6 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Subjective no-gold RewardBench diagnostic from ifc\_subjective\_control.csv. Interface flips are preference changes across five pairwise output interfaces on fixed A/B pairs. Position flips are estimated from order-swapped controls on choice-only and feedback-then-choice. Beyond position is the difference between the two. Chosen range is the max-min range in agreement with the curated chosen side across interfaces, reported as secondary preference-alignment evidence rather than deterministic accuracy. Values are percentages or percentage points.}
+\label{tab:subjective-control}
+\end{table}
+
 
 \section{Discussion}
 \label{sec:discussion}
@@ -389,6 +417,8 @@ The main result is that LLM judge comparisons are interface-contingent measureme
 This distinction is the paper's central boundary with prior prompt-sensitivity work. If all judges shifted similarly under a new prompt format, a leaderboard comparison could remain stable even while absolute accuracy changed. The results here show a more consequential failure mode. A judge model can appear better than an adjacent model under one reasonable interface and worse under another, even when the candidate solutions and ground-truth labels are unchanged.
 
 The reference-provided control further narrows the interpretation. When judges are shown the gold final answer and asked only to check final-answer match, the interface range and verdict-flip rate largely collapse. The measured instability is therefore not a claim that every possible grading setup is equally brittle. It is a claim about reference-free verifier-style judging, where the judge must evaluate a candidate solution without being handed the answer.
+
+The RewardBench diagnostic adds the complementary deployment point. In no-gold pairwise preference judging, interface changes also move decisions beyond plain A/B order effects, but the magnitude is smaller and more judge-dependent than in objective verification. This supports the broader measurement claim without turning subjective preference into an accuracy experiment.
 
 \subsection{Why Task Family Matters}
 \label{sec:discussion-task-family}
@@ -420,11 +450,13 @@ Second, the task set is intentionally restricted to problems with objective grou
 
 The reference-provided control also shows that the main effect is not expected to transfer unchanged to reference-based final-answer checking. When the answer is given, the output interface becomes much less consequential in our AIME and GPQA control. The paper's strongest scope is therefore reference-free verification, not every form of LLM-assisted grading.
 
-Third, the candidate pool is small by benchmark-leaderboard standards: 75 sampled candidate solutions per dataset before uniform context-overflow exclusions. The design gains paired control because every judge-interface cell sees the same candidates, but larger samples would give sharper estimates of pairwise gap changes and task-specific rank instability.
+Third, the subjective extension uses curated preference labels only as secondary evidence. These labels are useful for checking whether interface changes move agreement with the preferred response, but they are not deterministic ground truth. The main subjective metric is therefore decision instability under fixed response pairs. Position bias is also a co-factor, and the order-swap control shows that it accounts for a substantial part of the raw flip rate for some judges.
 
-Fourth, the interface variants are representative rather than exhaustive. We test verdict-only, rubric-verdict, score-then-verdict, verdict-plus-repair, and repair-then-verdict, along with deliberation-in-schema versions of the same interface matrix. Other schemas, rubric granularities, confidence formats, and constrained-decoding implementations may produce different magnitudes. The paper's claim is therefore about interface dependence and comparison instability, not about a universal ordering of all possible interfaces.
+Fourth, the candidate pool is small by benchmark-leaderboard standards: 75 sampled candidate solutions per dataset before uniform context-overflow exclusions in the objective runs and 150 RewardBench pairs in the subjective diagnostic. The design gains paired control because every judge-interface cell sees the same candidates, but larger samples would give sharper estimates of pairwise gap changes and task-specific rank instability.
 
-Fifth, constrained decoding reduces literal JSON failures but does not eliminate all non-verdicts. Long candidate solutions create uniform context-overflow exclusions, and some judge-interface cells have lower valid-verdict coverage because of truncation. We report coverage so that verdict effects are not confused with missingness, but larger-context runs would reduce this nuisance layer.
+Fifth, the interface variants are representative rather than exhaustive. We test verdict-only, rubric-verdict, score-then-verdict, verdict-plus-repair, and repair-then-verdict, along with deliberation-in-schema versions of the same interface matrix. In subjective pairwise judging, these map to choice-only, rubric-then-choice, score-then-choice, choice-then-feedback, and feedback-then-choice. Other schemas, rubric granularities, confidence formats, and constrained-decoding implementations may produce different magnitudes. The paper's claim is therefore about interface dependence and comparison instability, not about a universal ordering of all possible interfaces.
+
+Sixth, constrained decoding reduces literal JSON failures but does not eliminate all non-verdicts. Long candidate solutions create uniform context-overflow exclusions, and some judge-interface cells have lower valid-verdict coverage because of truncation. We report coverage so that verdict effects are not confused with missingness, but larger-context runs would reduce this nuisance layer.
 
 Finally, deliberation-in-schema is still a design ablation, not a universal mitigation. It stabilizes the tested local-judge comparisons across four datasets, but broader model coverage and subjective no-gold judging are needed before treating it as a general recommendation.
 
@@ -432,7 +464,7 @@ Finally, deliberation-in-schema is still a design ablation, not a universal miti
 \section{Conclusion}
 \label{sec:conclusion}
 
-LLM judge reliability cannot be read from the judge model name alone. Holding judged content fixed under constrained decoding, this study shows that benign output-interface choices can change pairwise judge gaps, adjacent rankings, and item-level verdicts. The direction of the interaction depends on the task family, so pooled summaries can hide the instability rather than resolve it. The practical conclusion is modest but important: an LLM judge result is a measurement produced by a model, a task distribution, and an output interface together. Reports that compare judge models should therefore specify the interface and test whether the comparison is stable under reasonable interface variants.
+LLM judge reliability cannot be read from the judge model name alone. Holding judged content fixed under constrained decoding, this study shows that benign output-interface choices can change pairwise judge gaps, adjacent rankings, and item-level verdicts in reference-free verification, and can also shift no-gold subjective preferences beyond plain position bias. The direction of the interaction depends on the task family, so pooled summaries can hide the instability rather than resolve it. The practical conclusion is modest but important: an LLM judge result is a measurement produced by a model, a task distribution, and an output interface together. Reports that compare judge models should therefore specify the interface and test whether the comparison is stable under reasonable interface variants.
 
 \section*{Data and Code Availability}
 
