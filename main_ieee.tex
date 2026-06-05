@@ -144,7 +144,7 @@ The no-deliberation matrix uses three local judge configurations: Gemma-4-no-thi
 
 All judges are served through the repository's local model presets. qwen3-no-think uses Qwen/Qwen3-32B with enable\_thinking=False; gpt-oss-no-think uses openai/gpt-oss-20b with reasoning\_effort=low; Gemma-4-no-think uses the Gemma-4 local serving configuration. The interface-confound runs use constrained JSON decoding through response\_format=json\_schema with strict schemas and a judge completion budget of max\_tokens=16000. The default endpoint is http://localhost:8000/v1.
 
-The secondary deliberation-in-schema run uses the same three judge families on AIME and GPQA. It does not rely on native private chain-of-thought modes. Instead, the constrained schema adds a required leading free-text reasoning field before the verdict fields, paired with an instruction to think step by step before emitting the verdict. This makes deliberation an explicit output-interface intervention.
+The secondary deliberation-in-schema run uses the same three judge families, four datasets, and five interfaces as the no-deliberation matrix. It does not rely on native private chain-of-thought modes. Instead, the constrained schema adds a required leading free-text reasoning field before the verdict fields, paired with an instruction to think step by step before emitting the verdict. This makes deliberation an explicit output-interface intervention.
 
 \subsection{Prompt-Interface Variants}
 \label{sec:prompt-variants}
@@ -154,7 +154,7 @@ The no-deliberation matrix uses five benign output interfaces. \textsc{Verdict-O
 \subsection{Logging Schema and Answer Checking}
 \label{sec:logging}
 
-Each judgment record stores the dataset, problem identifier, candidate identifier, judge model, output interface, parsed verdict, confidence when present, corrected answer when requested, raw response, token counts, non-verdict status, and the precomputed correctness of the candidate solution. Ground-truth checking uses dataset-specific answer normalization. For short-answer mathematics datasets, the final answer is normalized before exact or symbolic comparison. For multiple-choice datasets, the selected option is compared against the answer key. The main interface-confound analysis uses the verdict only; corrected answers are logged for secondary repair analyses.
+Each judgment record stores the dataset, problem identifier, candidate identifier, judge model, output interface, parsed verdict, confidence when present, corrected answer when requested, raw response, token counts, non-verdict status, and the precomputed correctness of the candidate solution. Ground-truth checking uses dataset-specific answer normalization. For short-answer mathematics datasets, the final answer is normalized before exact or symbolic comparison. For multiple-choice tasks, we re-derived candidate correctness labels with a robust option-letter normalizer; this corrected five GPQA labels, after which all accuracy-dependent analyses were recomputed and the reported conclusions were unchanged. The main interface-confound analysis uses the verdict only; corrected answers are logged for secondary repair analyses.
 
 \subsection{Coverage and Non-Verdict Handling}
 \label{sec:parse-handling}
@@ -312,17 +312,42 @@ Olympiad & 75 & 10 & 65 & 78.5--100.0 & qwen3 rubric \\
 \label{tab:coverage}
 \end{table}
 
+\subsection{Reference-Provided Control Localizes the Confound}
+\label{sec:results-reference}
+
+As a scoping diagnostic, we reran AIME and GPQA with the gold final answer provided to the judge. The prompt asked only whether the candidate final answer matched the provided answer; it did not ask for reasoning-validity judgments. This keeps the control aligned with the available deterministic label and tests whether the interface effect remains when reference-free verification is reduced to answer matching.
+
+Providing the reference answer largely collapses the interface spread. On the matched AIME+GPQA subset and three-interface comparison, the mean interface range drops from 9.4 points in the reference-free no-think condition to 1.6 points with the reference provided. The mean verdict-flip rate drops from 17.1\% to 1.7\% (Table~\ref{tab:reference-control}). Gemma-4-no-think is completely stable in this control: its interface range is 0.0 points and its verdict-flip rate is 0.0\% on both AIME and GPQA. gpt-oss-no-think retains only a small residual instability, with 1.1--1.2 point interface ranges and 3.0--5.6\% verdict flips. qwen3-no-think is nearly flat on AIME, with a 1.2 point range and 1.6\% flips, while GPQA remains the largest residual cell with a 5.8 point range but 0.0\% flips.
+
+The control therefore localizes the main confound. When correctness is reduced to reference-provided final-answer matching, ordinary output-interface choices barely move the measurement. The larger instability in the main experiment lives in reference-free verifier-style judging, where the judge must evaluate the candidate solution without seeing the gold answer. This does not weaken the main result; it scopes it to the critique, best-of-N, and self-repair settings where such reference-free verification is the actual use case.
+
+\begin{table}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrr}
+\toprule
+Condition & Mean range & Mean flips \\
+\midrule
+Reference-free & 9.4 & 17.1 \\
+Reference-provided & 1.6 & 1.7 \\
+\bottomrule
+\end{tabular}
+\caption{Reference-provided control summary from ifc\_reference\_control.csv. Mean range is the mean max-min balanced-accuracy spread across judges and datasets on AIME and GPQA with three matched interfaces. Mean flips is the mean percentage of fixed candidates whose verdict changes across those interfaces.}
+\label{tab:reference-control}
+\end{table}
+
 \subsection{Deliberation-in-Schema Stabilizes the Comparison}
 \label{sec:results-deliberation}
 
-The secondary robustness experiment asks whether adding an explicit deliberation slot to the constrained output contract stabilizes judge comparisons. This is not a native chain-of-thought comparison. The intervention is itself an interface change: a required free-text reasoning field is placed before the verdict fields, and the judge is instructed to reason before giving the verdict. The matched subset uses AIME and GPQA, the same three judges, and three interfaces: verdict-only, rubric-verdict, and repair-then-verdict.
+The secondary robustness experiment asks whether adding an explicit deliberation slot to the constrained output contract stabilizes judge comparisons. This is not a native chain-of-thought comparison. The intervention is itself an interface change: a required free-text reasoning field is placed before the verdict fields, and the judge is instructed to reason before giving the verdict. The full deliberation matrix mirrors the no-deliberation matrix: three judges, four datasets, five interfaces, and 4500 deliberation records.
 
-On this subset, deliberation-in-schema shrinks the mean interface range from 9.0 points to 3.3 points (Figure~\ref{fig:ifc-think}). Without the reasoning field, every judge-dataset cell has two distinct interface-specific rankings across the three interfaces. With the reasoning field, every judge-dataset cell has one distinct ranking, so the rank flips in the matched no-think subset disappear. Balanced accuracy also generally rises in the frozen per-interface deliberation table. For Gemma-4-no-think on AIME, the no-deliberation range of 79.1--91.8\% becomes 96.3--97.5\% with deliberation. On GPQA, Gemma-4-no-think moves from 58.0--68.7\% to 66.5--70.1\%, gpt-oss-no-think moves from 56.4--65.5\% to 61.6--65.6\%, and qwen3-no-think moves from 52.2--55.6\% to 53.3--58.7\%. The mean reasoning field length is 1443 characters on AIME and 1174 characters on GPQA. Valid-verdict coverage is similar across conditions in the summary table: 94.9--97.7\% without deliberation and 95.1--98.4\% with deliberation.
+Across the full matrix, deliberation-in-schema shrinks the mean interface range from 8.0 points to 4.9 points (Figure~\ref{fig:ifc-think}). The reduction appears in every dataset: AIME falls from 11.6 to 5.0 points, GPQA from 9.0 to 5.6 points, Olympiad from 6.0 to 5.2 points, and MMLU-Pro from 5.6 to 3.6 points. Ranking stability changes even more clearly. Without the reasoning field, interface-specific judge rankings are unstable in all four datasets; with the reasoning field, the ranking is stable across interfaces in all four datasets. Thus deliberation-in-schema stabilizes measured judge comparisons in this matrix, while remaining an output-interface intervention rather than evidence that private reasoning ability generally solves judge brittleness.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/fig_ifc_think.png}
-\caption{Deliberation-in-schema robustness ablation. Bars show the max-min balanced-accuracy range across the three matched interfaces for each judge on AIME and GPQA. Adding a required leading reasoning field reduces interface range and collapses the observed interface-specific ranking variants from two to one in each matched dataset.}
+\caption{Deliberation-in-schema robustness ablation on the full matrix. Bars show the max-min balanced-accuracy range across five interfaces for each judge and dataset. Adding a required leading reasoning field reduces interface range in every dataset and stabilizes the interface-specific judge rankings in all four datasets.}
 \label{fig:ifc-think}
 \end{figure}
 
@@ -331,22 +356,26 @@ On this subset, deliberation-in-schema shrinks the mean interface range from 9.0
 \footnotesize
 \setlength{\tabcolsep}{4pt}
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{llrrrr}
+\begin{tabular}{llrr}
 \toprule
-Condition & Dataset & Mean range & Rankings & Valid rate & Reason chars \\
+Condition & Dataset & Mean range & Rankings \\
 \midrule
-No deliberation & AIME & 10.3 & 2 & 94.9 & 0 \\
-No deliberation & GPQA & 7.7 & 2 & 97.7 & 0 \\
-Deliberation & AIME & 2.3 & 1 & 95.1 & 1443 \\
-Deliberation & GPQA & 4.4 & 1 & 98.4 & 1174 \\
+No deliberation & AIME & 11.6 & 2 \\
+No deliberation & GPQA & 9.0 & 2 \\
+No deliberation & Olympiad & 6.0 & 3 \\
+No deliberation & MMLU-Pro & 5.6 & 2 \\
+Deliberation & AIME & 5.0 & 1 \\
+Deliberation & GPQA & 5.6 & 1 \\
+Deliberation & Olympiad & 5.2 & 1 \\
+Deliberation & MMLU-Pro & 3.6 & 1 \\
 \bottomrule
 \end{tabular}
 }
-\caption{Deliberation-in-schema robustness summary. Mean range is the mean across judges of the max-min balanced-accuracy spread across the three matched interfaces. Rankings is the number of distinct interface-specific judge rankings observed in the dataset condition.}
+\caption{Deliberation-in-schema robustness summary from ifc\_think\_vs\_nothink\_full.csv. Mean range is the mean across judges of the max-min balanced-accuracy spread across five interfaces. Rankings is the number of distinct interface-specific judge rankings observed in the dataset condition.}
 \label{tab:deliberation}
 \end{table}
 
-The practical reading is narrow. Adding a leading deliberation field appears to stabilize the measured comparison in this matched subset, but it should not be described as proof that model reasoning ability solves judge brittleness. It is a controlled output-interface intervention, and its success reinforces the main thesis: the judge interface changes the measurement.
+The practical reading remains narrow. Adding a leading deliberation field stabilizes the measured comparison in this matrix, but it should not be described as proof that model reasoning ability solves judge brittleness. It is a controlled output-interface intervention, and its success reinforces the main thesis: the judge interface changes the measurement.
 
 
 \section{Discussion}
@@ -358,6 +387,8 @@ The practical reading is narrow. Adding a leading deliberation field appears to 
 The main result is that LLM judge comparisons are interface-contingent measurements. The experiment holds the judged content fixed and changes only the output contract imposed on the judge. Under that design, interface choices change pairwise judge gaps, adjacent rank orderings, and item-level verdicts. The effect is not a uniform prompt penalty applied to every judge. It is an interaction: different judges respond differently to the same output interface, and that interaction itself changes across task families.
 
 This distinction is the paper's central boundary with prior prompt-sensitivity work. If all judges shifted similarly under a new prompt format, a leaderboard comparison could remain stable even while absolute accuracy changed. The results here show a more consequential failure mode. A judge model can appear better than an adjacent model under one reasonable interface and worse under another, even when the candidate solutions and ground-truth labels are unchanged.
+
+The reference-provided control further narrows the interpretation. When judges are shown the gold final answer and asked only to check final-answer match, the interface range and verdict-flip rate largely collapse. The measured instability is therefore not a claim that every possible grading setup is equally brittle. It is a claim about reference-free verifier-style judging, where the judge must evaluate a candidate solution without being handed the answer.
 
 \subsection{Why Task Family Matters}
 \label{sec:discussion-task-family}
@@ -376,7 +407,7 @@ Repair-coupled interfaces deserve particular care. They are common in critique-r
 \subsection{Deliberation as an Interface Choice}
 \label{sec:discussion-deliberation}
 
-The deliberation-in-schema ablation is best read narrowly. Adding a required reasoning field before the verdict stabilizes the tested AIME and GPQA comparisons and improves balanced accuracy in several cells. That is useful evidence that some interface choices can reduce instability. It is not evidence that private reasoning ability generally solves judge brittleness. The intervention changes the output contract by forcing an explicit deliberation slot before the verdict, so it is itself part of the interface design space.
+The deliberation-in-schema ablation is best read narrowly. Adding a required reasoning field before the verdict stabilizes the tested comparisons across all four task families and reduces the mean interface range in each dataset. That is useful evidence that some interface choices can reduce instability. It is not evidence that private reasoning ability generally solves judge brittleness. The intervention changes the output contract by forcing an explicit deliberation slot before the verdict, so it is itself part of the interface design space.
 
 This matters for how mitigation claims should be written. A stable interface is not automatically a model capability improvement. It may be a better measurement interface for the task distribution under study. Future work should therefore compare candidate judge interfaces by both accuracy and comparison stability, rather than assuming that more reasoning text, more rubric fields, or more structured output is always better.
 
@@ -387,13 +418,15 @@ First, the experiment uses three local judge families. This is enough to test wh
 
 Second, the task set is intentionally restricted to problems with objective ground truth. This makes false acceptance, false rejection, and balanced accuracy well defined, and it avoids relying on another LLM to score the judge. The same design choice limits generalization to open-ended writing, summarization, dialogue quality, and subjective preference tasks, where there may be no single automatic correctness label.
 
+The reference-provided control also shows that the main effect is not expected to transfer unchanged to reference-based final-answer checking. When the answer is given, the output interface becomes much less consequential in our AIME and GPQA control. The paper's strongest scope is therefore reference-free verification, not every form of LLM-assisted grading.
+
 Third, the candidate pool is small by benchmark-leaderboard standards: 75 sampled candidate solutions per dataset before uniform context-overflow exclusions. The design gains paired control because every judge-interface cell sees the same candidates, but larger samples would give sharper estimates of pairwise gap changes and task-specific rank instability.
 
-Fourth, the interface variants are representative rather than exhaustive. We test verdict-only, rubric-verdict, score-then-verdict, verdict-plus-repair, and repair-then-verdict, along with a deliberation-in-schema subset. Other schemas, rubric granularities, confidence formats, and constrained-decoding implementations may produce different magnitudes. The paper's claim is therefore about interface dependence and comparison instability, not about a universal ordering of all possible interfaces.
+Fourth, the interface variants are representative rather than exhaustive. We test verdict-only, rubric-verdict, score-then-verdict, verdict-plus-repair, and repair-then-verdict, along with deliberation-in-schema versions of the same interface matrix. Other schemas, rubric granularities, confidence formats, and constrained-decoding implementations may produce different magnitudes. The paper's claim is therefore about interface dependence and comparison instability, not about a universal ordering of all possible interfaces.
 
 Fifth, constrained decoding reduces literal JSON failures but does not eliminate all non-verdicts. Long candidate solutions create uniform context-overflow exclusions, and some judge-interface cells have lower valid-verdict coverage because of truncation. We report coverage so that verdict effects are not confused with missingness, but larger-context runs would reduce this nuisance layer.
 
-Finally, deliberation-in-schema is only a secondary ablation on AIME and GPQA. It shows that an explicit reasoning field can stabilize the tested comparisons, but it should not be treated as a general mitigation without broader model and task coverage.
+Finally, deliberation-in-schema is still a design ablation, not a universal mitigation. It stabilizes the tested local-judge comparisons across four datasets, but broader model coverage and subjective no-gold judging are needed before treating it as a general recommendation.
 
 
 \section{Conclusion}

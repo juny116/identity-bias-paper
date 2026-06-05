@@ -145,11 +145,12 @@ def fig_gap_slopes() -> None:
 
 
 def fig_think() -> None:
-    rows = read_csv(TABLES / "ifc_think_vs_nothink.csv")
-    fig, axes = plt.subplots(1, 2, figsize=(8.8, 3.8), sharey=True, constrained_layout=True)
+    full_path = TABLES / "ifc_think_vs_nothink_full.csv"
+    rows = read_csv(full_path if full_path.exists() else TABLES / "ifc_think_vs_nothink.csv")
+    fig, axes = plt.subplots(2, 2, figsize=(10.5, 6.2), sharey=True, constrained_layout=True)
     width = 0.36
 
-    for ax, dataset in zip(axes, ["aime", "gpqa"]):
+    for ax, (dataset, title) in zip(axes.flat, DATASETS):
         drows = [r for r in rows if r["dataset"] == dataset]
         lookup = {(r["condition"], r["judge"]): r for r in drows}
         xs = list(range(len(JUDGES)))
@@ -157,15 +158,26 @@ def fig_think() -> None:
         delib_vals = [float(lookup[("deliberation", judge)]["interface_range_pp"]) for judge, _ in JUDGES]
         ax.bar([i - width / 2 for i in xs], no_vals, width=width, label="No deliberation", color="#9ecae1")
         ax.bar([i + width / 2 for i in xs], delib_vals, width=width, label="Deliberation field", color="#fdae6b")
-        ax.set_title(dataset.upper() if dataset == "aime" else "GPQA")
+        ax.set_title(title)
         ax.set_xticks(xs, [label for _, label in JUDGES])
         ax.set_ylabel("Interface range (pp)")
         ax.grid(axis="y", color="0.9", linewidth=0.8)
         for i, (nv, dv) in enumerate(zip(no_vals, delib_vals)):
-            ax.text(i, max(nv, dv) + 0.35, "2→1\nrankings", ha="center", va="bottom", fontsize=7, color="0.25")
+            no_rank = lookup[("no_think", JUDGES[i][0])]["distinct_rankings"]
+            delib_rank = lookup[("deliberation", JUDGES[i][0])]["distinct_rankings"]
+            ax.text(
+                i,
+                max(nv, dv) + 0.35,
+                f"{no_rank}→{delib_rank}\nrankings",
+                ha="center",
+                va="bottom",
+                fontsize=7,
+                color="0.25",
+            )
 
-    axes[0].legend(frameon=False, loc="upper right")
-    fig.suptitle("Deliberation-in-schema reduces interface sensitivity", y=1.04, fontsize=12)
+    handles, labels = axes.flat[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="upper center", ncol=2, frameon=False, bbox_to_anchor=(0.5, 1.03))
+    fig.suptitle("Deliberation-in-schema reduces interface sensitivity", y=1.06, fontsize=12)
     fig.savefig(FIGURES / "fig_ifc_think.png", bbox_inches="tight")
     plt.close(fig)
 
