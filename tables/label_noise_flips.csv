@@ -1,0 +1,9 @@
+dataset,problem_id,solver,ground_truth,extracted_final_answer,robust_letter,stored_label,robust_label
+gpqa,gpqa_gpqa_diamond_55,gpt-oss-no-think,D,\text{(D)},D,False,True
+gpqa,gpqa_gpqa_diamond_183,gpt-oss-think,A,"Thus, we need to produce phenol at the correct pos",A,False,True
+gpqa,gpqa_gpqa_diamond_1,gpt-oss-think,C,"Ok, I'll try to decode the reagent from the name: ",C,False,True
+gpqa,gpqa_gpqa_diamond_87,gpt-oss-no-think,C,\text{C},C,False,True
+gpqa,gpqa_gpqa_diamond_77,gpt-oss-think,B,\text{B},B,False,True
+gpqa,gpqa_gpqa_diamond_11,gpt-oss-no-think,C,"(C)\;4.12\ \text{MeV},\ 29.8\ \text{MeV}",C,False,True
+gpqa,gpqa_gpqa_diamond_40,gpt-oss-no-think,A,"\text{(A)}\;\frac{1+n\,v}{\,n+v\,}",A,False,True
+mmlu_pro,mmlu_pro_5798,gpt-oss-think,F,"A,\;C,\;F",F,False,True
